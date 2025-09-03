@@ -1,0 +1,10 @@
+[project]
+name = "timbargo"
+version = "0.1.0"
+description = "Tim Bargo's personal website - a minimal static site built with Pelican"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "markdown>=3.8.2",
+    "pelican>=4.11.0",
+]
