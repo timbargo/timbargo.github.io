@@ -1,3 +1,3 @@
 # Tim Bargo
 
-Personal website built with Pelican.
+Simple personal website with spinning text.
