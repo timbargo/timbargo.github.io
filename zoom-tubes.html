@@ -11,6 +11,7 @@
             background: #000;
             overflow: hidden;
             font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+            cursor: pointer;
         }
         
         #canvas {
@@ -415,6 +416,11 @@
         
         window.addEventListener('load', () => {
             new TubeScreensaver();
+        });
+        
+        // Add click navigation to next experience
+        document.addEventListener('click', () => {
+            window.location.href = 'xp-tubes.html';
         });
     </script>
 </body>

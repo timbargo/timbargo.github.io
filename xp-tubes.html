@@ -11,6 +11,7 @@
             background: #000;
             overflow: hidden;
             font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+            cursor: pointer;
         }
         
         #canvas {
@@ -45,7 +46,7 @@
 </head>
 <body>
     <canvas id="canvas"></canvas>
-    <div id="name">TIM BARGO</div>
+    <div id="name"></div>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
@@ -489,6 +490,11 @@
         
         window.addEventListener('load', () => {
             new PipeScreensaver();
+        });
+        
+        // Add click navigation to complete the cycle back to index
+        document.addEventListener('click', () => {
+            window.location.href = 'index.html';
         });
     </script>
 </body>
