@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tim Bargo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: rgb(251, 214, 255);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+        }
+        
+        .name {
+            font-size: 4rem;
+            color: black;
+            font-weight: bold;
+            animation: spin 10s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .name {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="name">tim bargo</div>
+</body>
+</html>
