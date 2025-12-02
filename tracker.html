@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BAC Tracker - Tim Bargo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+            background: linear-gradient(180deg, #ffffff 0%, #f0f4f8 100%);
+            min-height: 100vh;
+            padding: 12px;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: clamp(1.5rem, 5vw, 2rem);
+            color: #1f2937;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        /* Settings Section */
+        .settings-toggle {
+            width: 100%;
+            background: #14b8a6;
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-family: inherit;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 44px;
+        }
+
+        .settings-toggle:active {
+            background: #0d9488;
+        }
+
+        .settings-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .settings-content.expanded {
+            max-height: 500px;
+            padding-top: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            color: #4b5563;
+            margin-bottom: 4px;
+            font-weight: bold;
+        }
+
+        input[type="number"],
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px; /* Prevents iOS zoom */
+            font-family: inherit;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            min-height: 44px;
+            background: white;
+        }
+
+        input[type="number"]:focus,
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #14b8a6;
+        }
+
+        button.primary {
+            width: 100%;
+            background: #14b8a6;
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-family: inherit;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            min-height: 44px;
+        }
+
+        button.primary:active {
+            background: #0d9488;
+        }
+
+        button.secondary {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            font-size: 14px;
+            font-family: inherit;
+            border-radius: 4px;
+            cursor: pointer;
+            min-height: 36px;
+        }
+
+        button.secondary:active {
+            background: #dc2626;
+        }
+
+        /* Current BAC Display */
+        .bac-display {
+            text-align: center;
+            padding: 24px 0;
+        }
+
+        .bac-value {
+            font-size: clamp(3rem, 10vw, 4rem);
+            font-weight: bold;
+            color: #14b8a6;
+            line-height: 1;
+        }
+
+        .bac-label {
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .profile-hint {
+            text-align: center;
+            color: #ef4444;
+            font-size: 14px;
+            padding: 8px;
+            background: #fee2e2;
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+
+        /* Chart */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 16px 0;
+        }
+
+        /* Drink History */
+        .drink-item {
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .drink-info {
+            flex: 1;
+        }
+
+        .drink-details {
+            font-size: 16px;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
+
+        .drink-time {
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .drink-time.absorbing {
+            color: #14b8a6;
+            font-weight: bold;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #9ca3af;
+            padding: 24px;
+            font-size: 14px;
+        }
+
+        /* Disclaimer */
+        .disclaimer {
+            font-size: 12px;
+            color: #6b7280;
+            text-align: center;
+            line-height: 1.4;
+            padding: 16px 0;
+        }
+
+        /* Card Headers */
+        .card-header {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 12px;
+        }
+
+        /* Responsive adjustments */
+        @media (min-width: 768px) {
+            body {
+                padding: 24px;
+            }
+
+            .card {
+                padding: 24px;
+                margin-bottom: 16px;
+            }
+
+            .chart-container {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BAC Tracker</h1>
+
+        <!-- Settings Card -->
+        <div class="card">
+            <button class="settings-toggle" id="settingsToggle">
+                <span>Settings</span>
+                <span id="settingsArrow">▼</span>
+            </button>
+            <div class="settings-content" id="settingsContent">
+                <div class="form-group">
+                    <label for="weight">Weight (lbs)</label>
+                    <input type="number" id="weight" inputmode="decimal" min="50" max="500" placeholder="e.g., 180">
+                </div>
+                <div class="form-group">
+                    <label for="gender">Gender</label>
+                    <select id="gender">
+                        <option value="">Select gender</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <button class="primary" id="saveProfile">Save Profile</button>
+            </div>
+        </div>
+
+        <!-- Profile Hint (shown when no profile exists) -->
+        <div class="profile-hint" id="profileHint" style="display: none;">
+            ⚠️ Please set your profile in Settings to see BAC estimates
+        </div>
+
+        <!-- Current BAC Display -->
+        <div class="card">
+            <div class="bac-display">
+                <div class="bac-value" id="bacValue">0.000%</div>
+                <div class="bac-label">Current BAC</div>
+            </div>
+        </div>
+
+        <!-- Peak BAC Display -->
+        <div class="card">
+            <div class="bac-display">
+                <div class="bac-value" id="peakBacValue" style="font-size: clamp(2rem, 8vw, 3rem);">0.000%</div>
+                <div class="bac-label">Peak BAC (Next 8 Hours)</div>
+            </div>
+        </div>
+
+        <!-- Add Drink Card -->
+        <div class="card">
+            <div class="card-header">Add Drink</div>
+            <div class="form-group">
+                <label for="volume">Volume (oz)</label>
+                <input type="number" id="volume" inputmode="decimal" min="0.25" max="64" step="0.25" placeholder="e.g., 12">
+            </div>
+            <div class="form-group">
+                <label for="abv">ABV (%)</label>
+                <input type="number" id="abv" inputmode="decimal" min="0.5" max="95" step="0.1" placeholder="e.g., 5">
+            </div>
+            <button class="primary" id="addDrink">Add Drink</button>
+        </div>
+
+        <!-- BAC Projection Chart -->
+        <div class="card">
+            <div class="card-header">8-Hour BAC Projection</div>
+            <div class="chart-container">
+                <canvas id="bacChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Drink History -->
+        <div class="card">
+            <div class="card-header">Drink History</div>
+            <div id="drinkHistory">
+                <div class="empty-state">No drinks logged yet</div>
+            </div>
+            <button class="secondary" id="clearAllDrinks" style="width: 100%; margin-top: 12px;">Clear All Drinks</button>
+        </div>
+
+        <!-- Disclaimer -->
+        <div class="disclaimer">
+            This BAC estimate is for informational purposes only. Actual BAC varies significantly by individual. Never drink and drive.
+        </div>
+    </div>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+
+    <script>
+        // UserProfile Class - Manages user data in localStorage
+        class UserProfile {
+            constructor() {
+                this.storageKey = 'bac_tracker_profile';
+            }
+
+            saveProfile(weightLbs, gender) {
+                const profile = {
+                    weightLbs: parseFloat(weightLbs),
+                    gender: gender,
+                    lastUpdated: new Date().toISOString()
+                };
+                localStorage.setItem(this.storageKey, JSON.stringify(profile));
+                return profile;
+            }
+
+            getProfile() {
+                const data = localStorage.getItem(this.storageKey);
+                return data ? JSON.parse(data) : null;
+            }
+
+            hasProfile() {
+                const profile = this.getProfile();
+                return profile && profile.weightLbs && profile.gender;
+            }
+        }
+
+        // DrinkLogger Class - Manages drink entries in localStorage
+        class DrinkLogger {
+            constructor() {
+                this.storageKey = 'bac_tracker_drinks';
+                this.cleanupOldDrinks();
+            }
+
+            addDrink(volumeOz, abv) {
+                const drinks = this.getDrinks();
+                const gramsAlcohol = this.calculateGramsAlcohol(volumeOz, abv);
+
+                const drink = {
+                    id: Date.now(),
+                    volumeOz: parseFloat(volumeOz),
+                    abv: parseFloat(abv),
+                    timestamp: new Date().toISOString(),
+                    gramsAlcohol: gramsAlcohol
+                };
+
+                drinks.push(drink);
+                localStorage.setItem(this.storageKey, JSON.stringify(drinks));
+                return drink;
+            }
+
+            getDrinks() {
+                const data = localStorage.getItem(this.storageKey);
+                return data ? JSON.parse(data) : [];
+            }
+
+            deleteDrink(id) {
+                let drinks = this.getDrinks();
+                drinks = drinks.filter(drink => drink.id !== id);
+                localStorage.setItem(this.storageKey, JSON.stringify(drinks));
+            }
+
+            cleanupOldDrinks() {
+                // Remove drinks older than 12 hours (no longer affect BAC)
+                let drinks = this.getDrinks();
+                const twelveHoursAgo = Date.now() - (12 * 60 * 60 * 1000);
+                drinks = drinks.filter(drink => new Date(drink.timestamp).getTime() > twelveHoursAgo);
+                localStorage.setItem(this.storageKey, JSON.stringify(drinks));
+            }
+
+            calculateGramsAlcohol(volumeOz, abv) {
+                // Convert oz to grams of pure alcohol
+                // 1 oz = 29.5735 ml, alcohol density = 0.789 g/ml
+                const mlPerOz = 29.5735;
+                const alcoholDensity = 0.789;
+                const volumeMl = volumeOz * mlPerOz;
+                const gramsAlcohol = volumeMl * (abv / 100) * alcoholDensity;
+                return gramsAlcohol;
+            }
+        }
+
+        // BACCalculator Class - Core BAC calculation using Widmark formula
+        class BACCalculator {
+            constructor() {
+                // Widmark distribution ratios
+                this.widmarkRatio = {
+                    male: 0.68,
+                    female: 0.55,
+                    other: 0.61
+                };
+                this.eliminationRate = 0.015; // g/dL/hr (standard)
+            }
+
+            // Calculate absorption factor based on time since drink
+            getAbsorptionFactor(minutesSinceDrink) {
+                if (minutesSinceDrink <= 30) {
+                    return minutesSinceDrink / 60; // 50% at 30min
+                } else if (minutesSinceDrink <= 60) {
+                    return 0.5 + (minutesSinceDrink - 30) / 75; // 90% at 60min
+                } else if (minutesSinceDrink <= 90) {
+                    return 0.9 + (minutesSinceDrink - 60) / 300; // 100% at 90min
+                }
+                return 1.0;
+            }
+
+            // Calculate current BAC from all drinks
+            calculateCurrentBAC(drinks, profile) {
+                if (!profile || !profile.weightLbs || !profile.gender) {
+                    return 0;
+                }
+
+                const currentTime = new Date();
+                const weightKg = profile.weightLbs * 0.453592; // Convert pounds to kilograms
+                const r = this.widmarkRatio[profile.gender] || this.widmarkRatio.other;
+
+                console.log('=== BAC Calculation Debug ===');
+                console.log('Profile:', profile);
+                console.log('Number of drinks:', drinks.length);
+
+                // Step 1: Calculate total absorbed alcohol and weighted average time
+                let totalAbsorbed = 0;
+                let totalGramsForAverage = 0;
+                let weightedTimeSum = 0;
+
+                drinks.forEach((drink, index) => {
+                    const drinkTime = new Date(drink.timestamp);
+                    const minutesSinceDrink = (currentTime - drinkTime) / (1000 * 60);
+                    const hoursSinceDrink = minutesSinceDrink / 60;
+
+                    // Apply absorption curve
+                    const absorptionFactor = this.getAbsorptionFactor(minutesSinceDrink);
+                    const absorbedAlcohol = drink.gramsAlcohol * absorptionFactor;
+
+                    totalAbsorbed += absorbedAlcohol;
+                    totalGramsForAverage += drink.gramsAlcohol;
+                    weightedTimeSum += hoursSinceDrink * drink.gramsAlcohol;
+
+                    console.log(`Drink ${index + 1}:`, {
+                        gramsAlcohol: drink.gramsAlcohol.toFixed(2),
+                        minutesSinceDrink: minutesSinceDrink.toFixed(1),
+                        absorptionFactor: absorptionFactor.toFixed(3),
+                        absorbedAlcohol: absorbedAlcohol.toFixed(2)
+                    });
+                });
+
+                // Step 2: Calculate BAC from total absorbed alcohol
+                const bacFromAbsorption = totalAbsorbed / (weightKg * r * 10);
+
+                // Step 3: Calculate weighted average time for elimination
+                const averageTime = totalGramsForAverage > 0 ? weightedTimeSum / totalGramsForAverage : 0;
+
+                // Step 4: Subtract elimination based on average time
+                const totalBAC = Math.max(0, bacFromAbsorption - (this.eliminationRate * averageTime));
+
+                console.log('Total absorbed:', totalAbsorbed.toFixed(2), 'grams');
+                console.log('BAC from absorption:', bacFromAbsorption.toFixed(5));
+                console.log('Average time:', averageTime.toFixed(2), 'hours');
+                console.log('Elimination:', (this.eliminationRate * averageTime).toFixed(5));
+                console.log('Total BAC:', totalBAC.toFixed(5));
+                console.log('========================\n');
+
+                return totalBAC;
+            }
+
+            // Project BAC over the next 8 hours
+            projectBAC(drinks, profile, hours = 8) {
+                if (!profile || !profile.weightLbs || !profile.gender) {
+                    return Array(hours * 4 + 1).fill(0);
+                }
+
+                const projection = [];
+                const currentTime = new Date();
+                const intervalMinutes = 15;
+                const weightKg = profile.weightLbs * 0.453592; // Convert pounds to kilograms
+                const r = this.widmarkRatio[profile.gender] || this.widmarkRatio.other;
+
+                // Generate data points every 15 minutes
+                for (let i = 0; i <= hours * 60; i += intervalMinutes) {
+                    const futureTime = new Date(currentTime.getTime() + i * 60 * 1000);
+
+                    // Step 1: Calculate total absorbed alcohol and weighted average time
+                    let totalAbsorbed = 0;
+                    let totalGramsForAverage = 0;
+                    let weightedTimeSum = 0;
+
+                    drinks.forEach(drink => {
+                        const drinkTime = new Date(drink.timestamp);
+                        const minutesSinceDrink = (futureTime - drinkTime) / (1000 * 60);
+                        const hoursSinceDrink = minutesSinceDrink / 60;
+
+                        if (minutesSinceDrink >= 0) {
+                            const absorptionFactor = this.getAbsorptionFactor(minutesSinceDrink);
+                            const absorbedAlcohol = drink.gramsAlcohol * absorptionFactor;
+
+                            totalAbsorbed += absorbedAlcohol;
+                            totalGramsForAverage += drink.gramsAlcohol;
+                            weightedTimeSum += hoursSinceDrink * drink.gramsAlcohol;
+                        }
+                    });
+
+                    // Step 2: Calculate BAC from total absorbed alcohol
+                    const bacFromAbsorption = totalAbsorbed / (weightKg * r * 10);
+
+                    // Step 3: Calculate weighted average time for elimination
+                    const averageTime = totalGramsForAverage > 0 ? weightedTimeSum / totalGramsForAverage : 0;
+
+                    // Step 4: Subtract elimination based on average time
+                    const totalBAC = Math.max(0, bacFromAbsorption - (this.eliminationRate * averageTime));
+
+                    projection.push(totalBAC);
+                }
+
+                return projection;
+            }
+
+            // Find peak BAC from projection
+            getPeakBAC(drinks, profile, hours = 8) {
+                const projection = this.projectBAC(drinks, profile, hours);
+                return Math.max(...projection);
+            }
+        }
+
+        // BACTracker Class - Main controller
+        class BACTracker {
+            constructor() {
+                this.profile = new UserProfile();
+                this.logger = new DrinkLogger();
+                this.calculator = new BACCalculator();
+                this.chart = null;
+
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.loadProfile();
+                this.updateDisplay();
+                this.initChart();
+
+                // Auto-refresh every 60 seconds
+                setInterval(() => {
+                    this.updateDisplay();
+                }, 60000);
+            }
+
+            setupEventListeners() {
+                // Settings toggle
+                document.getElementById('settingsToggle').addEventListener('click', () => {
+                    const content = document.getElementById('settingsContent');
+                    const arrow = document.getElementById('settingsArrow');
+                    content.classList.toggle('expanded');
+                    arrow.textContent = content.classList.contains('expanded') ? '▲' : '▼';
+                });
+
+                // Save profile
+                document.getElementById('saveProfile').addEventListener('click', () => {
+                    const weight = document.getElementById('weight').value;
+                    const gender = document.getElementById('gender').value;
+
+                    if (!weight || !gender) {
+                        alert('Please enter both weight and gender');
+                        return;
+                    }
+
+                    if (weight < 50 || weight > 500) {
+                        alert('Please enter a valid weight between 50 and 500 lbs');
+                        return;
+                    }
+
+                    this.profile.saveProfile(weight, gender);
+                    alert('Profile saved!');
+                    this.updateDisplay();
+                });
+
+                // Add drink
+                document.getElementById('addDrink').addEventListener('click', () => {
+                    const volume = document.getElementById('volume').value;
+                    const abv = document.getElementById('abv').value;
+
+                    if (!volume || !abv) {
+                        alert('Please enter both volume and ABV');
+                        return;
+                    }
+
+                    if (volume < 0.25 || volume > 64) {
+                        alert('Please enter a valid volume between 0.25 and 64 oz');
+                        return;
+                    }
+
+                    if (abv < 0.5 || abv > 95) {
+                        alert('Please enter a valid ABV between 0.5 and 95%');
+                        return;
+                    }
+
+                    this.logger.addDrink(volume, abv);
+
+                    // Clear inputs
+                    document.getElementById('volume').value = '';
+                    document.getElementById('abv').value = '';
+
+                    this.updateDisplay();
+                });
+
+                // Clear all drinks
+                document.getElementById('clearAllDrinks').addEventListener('click', () => {
+                    if (confirm('Clear all drink history?')) {
+                        localStorage.removeItem('bac_tracker_drinks');
+                        this.updateDisplay();
+                    }
+                });
+            }
+
+            loadProfile() {
+                const profile = this.profile.getProfile();
+                if (profile) {
+                    document.getElementById('weight').value = profile.weightLbs;
+                    document.getElementById('gender').value = profile.gender;
+                }
+            }
+
+            updateDisplay() {
+                const profile = this.profile.getProfile();
+                const drinks = this.logger.getDrinks();
+
+                // Show/hide profile hint
+                const profileHint = document.getElementById('profileHint');
+                if (!this.profile.hasProfile()) {
+                    profileHint.style.display = 'block';
+                } else {
+                    profileHint.style.display = 'none';
+                }
+
+                // Update current BAC
+                const currentBAC = this.calculator.calculateCurrentBAC(drinks, profile);
+                document.getElementById('bacValue').textContent = currentBAC.toFixed(3) + '%';
+
+                // Update peak BAC
+                const peakBAC = this.calculator.getPeakBAC(drinks, profile, 8);
+                document.getElementById('peakBacValue').textContent = peakBAC.toFixed(3) + '%';
+
+                // Update chart
+                this.updateChart(drinks, profile);
+
+                // Update drink history
+                this.updateDrinkHistory(drinks);
+            }
+
+            initChart() {
+                const ctx = document.getElementById('bacChart').getContext('2d');
+
+                this.chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: this.generateTimeLabels(),
+                        datasets: [{
+                            label: 'BAC %',
+                            data: [],
+                            borderColor: '#14b8a6',
+                            backgroundColor: 'rgba(20, 184, 166, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#14b8a6',
+                            borderWidth: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 0.24,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toFixed(3) + '%';
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'BAC %'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Time from Now'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            generateTimeLabels() {
+                const labels = ['Now'];
+                for (let i = 1; i <= 8; i++) {
+                    labels.push(i + 'hr');
+                }
+                return labels;
+            }
+
+            updateChart(drinks, profile) {
+                if (!this.chart) return;
+
+                const projection = this.calculator.projectBAC(drinks, profile, 8);
+
+                // Sample every 4th data point (every hour instead of every 15 min)
+                const hourlyData = projection.filter((_, index) => index % 4 === 0);
+
+                this.chart.data.datasets[0].data = hourlyData;
+
+                // Force chart to update with animation
+                this.chart.update('active');
+            }
+
+            updateDrinkHistory(drinks) {
+                const container = document.getElementById('drinkHistory');
+
+                if (drinks.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No drinks logged yet</div>';
+                    return;
+                }
+
+                // Sort drinks by timestamp (newest first)
+                const sortedDrinks = [...drinks].sort((a, b) =>
+                    new Date(b.timestamp) - new Date(a.timestamp)
+                );
+
+                container.innerHTML = sortedDrinks.map(drink => {
+                    const drinkTime = new Date(drink.timestamp);
+                    const minutesAgo = Math.floor((Date.now() - drinkTime.getTime()) / (1000 * 60));
+                    const isAbsorbing = minutesAgo < 90;
+
+                    let timeString;
+                    if (minutesAgo < 1) {
+                        timeString = 'Just now';
+                    } else if (minutesAgo < 60) {
+                        timeString = minutesAgo + ' min ago';
+                    } else {
+                        const hoursAgo = Math.floor(minutesAgo / 60);
+                        const remainingMins = minutesAgo % 60;
+                        timeString = hoursAgo + ' hr' + (remainingMins > 0 ? ' ' + remainingMins + ' min' : '') + ' ago';
+                    }
+
+                    return `
+                        <div class="drink-item">
+                            <div class="drink-info">
+                                <div class="drink-details">${drink.volumeOz}oz • ${drink.abv}% ABV</div>
+                                <div class="drink-time ${isAbsorbing ? 'absorbing' : ''}">${timeString}${isAbsorbing ? ' (absorbing)' : ''}</div>
+                            </div>
+                            <button class="secondary" onclick="tracker.deleteDrink(${drink.id})">Delete</button>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            deleteDrink(id) {
+                if (confirm('Delete this drink?')) {
+                    this.logger.deleteDrink(id);
+                    this.updateDisplay();
+                }
+            }
+        }
+
+        // Initialize the tracker
+        const tracker = new BACTracker();
+    </script>
+</body>
+</html>
