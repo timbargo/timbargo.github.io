@@ -104,6 +104,28 @@
             border-color: #14b8a6;
         }
 
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        input[type="datetime-local"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            font-family: inherit;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            min-height: 44px;
+            background: white;
+        }
+
+        input[type="datetime-local"]:focus {
+            outline: none;
+            border-color: #14b8a6;
+        }
+
         button.primary {
             width: 100%;
             background: #14b8a6;
@@ -251,6 +273,9 @@
 <body>
     <div class="container">
         <h1>BAC Tracker</h1>
+        <p style="text-align: center; margin-bottom: 16px;">
+            <a href="tracker-info.html" style="color: #14b8a6; text-decoration: none; font-weight: bold;">📚 How the models work</a>
+        </p>
 
         <!-- Settings Card -->
         <div class="card">
@@ -264,12 +289,11 @@
                     <input type="number" id="weight" inputmode="decimal" min="50" max="500" placeholder="e.g., 180">
                 </div>
                 <div class="form-group">
-                    <label for="gender">Gender</label>
+                    <label for="gender">Gender (for metabolism modeling)</label>
                     <select id="gender">
                         <option value="">Select gender</option>
                         <option value="male">Male</option>
                         <option value="female">Female</option>
-                        <option value="other">Other</option>
                     </select>
                 </div>
                 <button class="primary" id="saveProfile">Save Profile</button>
@@ -300,6 +324,31 @@
         <!-- Add Drink Card -->
         <div class="card">
             <div class="card-header">Add Drink</div>
+
+            <!-- Custom time toggle -->
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="customTimeToggle" style="width: auto;">
+                    <span>Custom time (for past drinks)</span>
+                </label>
+            </div>
+
+            <!-- Hidden datetime input -->
+            <div class="form-group" id="customTimeGroup" style="display: none;">
+                <label for="drinkTime">Drink Time</label>
+                <input type="datetime-local" id="drinkTime" style="width: 100%;">
+            </div>
+
+            <div class="form-group">
+                <label for="beverageType">Beverage Type</label>
+                <select id="beverageType">
+                    <option value="beer">Beer (slowest absorption)</option>
+                    <option value="wine" selected>Wine (moderate absorption)</option>
+                    <option value="seltzer">Seltzer/Hard Seltzer (fast absorption)</option>
+                    <option value="spirits">Spirits (fastest absorption)</option>
+                </select>
+            </div>
+
             <div class="form-group">
                 <label for="volume">Volume (oz)</label>
                 <input type="number" id="volume" inputmode="decimal" min="0.25" max="64" step="0.25" placeholder="e.g., 12">
@@ -314,6 +363,14 @@
         <!-- BAC Projection Chart -->
         <div class="card">
             <div class="card-header">8-Hour BAC Projection</div>
+
+            <!-- Scrub info overlay -->
+            <div id="scrubInfo" style="display: none; background: rgba(20, 184, 166, 0.95); color: white; padding: 12px; border-radius: 6px; margin-bottom: 8px; font-size: 14px;">
+                <div id="scrubBAC" style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">BAC: 0.000%</div>
+                <div id="scrubTime">Time: Now</div>
+                <div id="scrubZero">Time until zero: --</div>
+            </div>
+
             <div class="chart-container">
                 <canvas id="bacChart"></canvas>
             </div>
@@ -372,7 +429,7 @@
                 this.cleanupOldDrinks();
             }
 
-            addDrink(volumeOz, abv) {
+            addDrink(volumeOz, abv, customTimestamp = null, beverageType = 'wine', stomachFullness = 'empty') {
                 const drinks = this.getDrinks();
                 const gramsAlcohol = this.calculateGramsAlcohol(volumeOz, abv);
 
@@ -380,8 +437,10 @@
                     id: Date.now(),
                     volumeOz: parseFloat(volumeOz),
                     abv: parseFloat(abv),
-                    timestamp: new Date().toISOString(),
-                    gramsAlcohol: gramsAlcohol
+                    timestamp: customTimestamp || new Date().toISOString(),
+                    gramsAlcohol: gramsAlcohol,
+                    beverageType: beverageType,
+                    stomachFullness: stomachFullness
                 };
 
                 drinks.push(drink);
@@ -419,133 +478,204 @@
             }
         }
 
-        // BACCalculator Class - Core BAC calculation using Widmark formula
+        // BACCalculator Class - Core BAC calculation using Michaelis-Menten enzyme kinetics
         class BACCalculator {
             constructor() {
-                // Widmark distribution ratios
+                // Widmark distribution ratios (for absorption calculation)
                 this.widmarkRatio = {
                     male: 0.68,
-                    female: 0.55,
-                    other: 0.61
+                    female: 0.55
                 };
-                this.eliminationRate = 0.015; // g/dL/hr (standard)
+
+                // Michaelis-Menten parameters for elimination
+                this.vmaxByGender = {
+                    male: 0.017,    // g/dL/hr - males metabolize ~25% faster
+                    female: 0.013   // g/dL/hr - females have less ADH enzyme
+                };
+                this.km = 0.015; // g/dL - Michaelis constant (enzyme saturation point)
             }
 
-            // Calculate absorption factor based on time since drink
-            getAbsorptionFactor(minutesSinceDrink) {
-                if (minutesSinceDrink <= 30) {
-                    return minutesSinceDrink / 60; // 50% at 30min
-                } else if (minutesSinceDrink <= 60) {
-                    return 0.5 + (minutesSinceDrink - 30) / 75; // 90% at 60min
-                } else if (minutesSinceDrink <= 90) {
-                    return 0.9 + (minutesSinceDrink - 60) / 300; // 100% at 90min
+            // Calculate absorption factor using Weibull distribution with gastric lag
+            // Accounts for beverage type and stomach fullness
+            getAbsorptionFactor(minutesSinceDrink, stomachFullness = 'empty', beverageType = 'wine') {
+                // Lag times based on stomach fullness (gastric emptying delay)
+                const lagByFullness = {
+                    empty: 5,      // 5 min - empty stomach
+                    moderate: 10,  // 10 min - some food
+                    full: 20       // 20 min - full meal
+                };
+
+                // Scale parameter (λ) varies by beverage type
+                // Smaller λ = faster absorption (earlier peak)
+                const lambdaByBeverage = {
+                    beer: 45,      // Slowest - low alcohol % + grain density
+                    wine: 35,      // Moderate - balanced 12-15% concentration
+                    seltzer: 30,   // Moderate-fast - 5% but carbonation speeds absorption
+                    spirits: 25    // Fastest - high alcohol % triggers rapid gastric emptying
+                };
+
+                const lag = lagByFullness[stomachFullness] || lagByFullness.empty;
+                const lambda = lambdaByBeverage[beverageType] || lambdaByBeverage.wine;
+                const k = 2.8;  // Shape parameter (constant across beverages)
+
+                // Before lag time, no absorption
+                if (minutesSinceDrink < lag) {
+                    return 0;
                 }
-                return 1.0;
+
+                // Weibull CDF: F(t) = 1 - exp(-((t - lag)/λ)^k)
+                const t = minutesSinceDrink - lag;
+                const absorption = 1 - Math.exp(-Math.pow(t / lambda, k));
+
+                return Math.min(absorption, 1.0);
             }
 
-            // Calculate current BAC from all drinks
+            // Calculate absorption RATE (derivative of Weibull CDF)
+            // Returns rate of absorption per minute at time t
+            getAbsorptionRate(minutesSinceDrink, stomachFullness = 'empty', beverageType = 'wine') {
+                const lagByFullness = {
+                    empty: 5,
+                    moderate: 10,
+                    full: 20
+                };
+
+                const lambdaByBeverage = {
+                    beer: 45,
+                    wine: 35,
+                    seltzer: 30,
+                    spirits: 25
+                };
+
+                const lag = lagByFullness[stomachFullness] || lagByFullness.empty;
+                const lambda = lambdaByBeverage[beverageType] || lambdaByBeverage.wine;
+                const k = 2.8;
+
+                // Before lag time, no absorption
+                if (minutesSinceDrink < lag) {
+                    return 0;
+                }
+
+                const t = minutesSinceDrink - lag;
+                // Derivative of Weibull CDF: (k/λ) * (t/λ)^(k-1) * exp(-(t/λ)^k)
+                const rate = (k / lambda) * Math.pow(t / lambda, k - 1) * Math.exp(-Math.pow(t / lambda, k));
+
+                return rate;
+            }
+
+            // Calculate current BAC from all drinks using Michaelis-Menten kinetics
+            // Integrates absorption and elimination simultaneously minute-by-minute
             calculateCurrentBAC(drinks, profile) {
                 if (!profile || !profile.weightLbs || !profile.gender) {
                     return 0;
                 }
 
                 const currentTime = new Date();
-                const weightKg = profile.weightLbs * 0.453592; // Convert pounds to kilograms
-                const r = this.widmarkRatio[profile.gender] || this.widmarkRatio.other;
+                const weightKg = profile.weightLbs * 0.453592;
+                const r = this.widmarkRatio[profile.gender];
 
-                console.log('=== BAC Calculation Debug ===');
-                console.log('Profile:', profile);
-                console.log('Number of drinks:', drinks.length);
+                // Michaelis-Menten parameters (gender-specific)
+                const Vmax = this.vmaxByGender[profile.gender];
+                const Km = this.km;
 
-                // Step 1: Calculate total absorbed alcohol and weighted average time
-                let totalAbsorbed = 0;
-                let totalGramsForAverage = 0;
-                let weightedTimeSum = 0;
+                // Process each drink separately, then sum
+                let totalBAC = 0;
 
-                drinks.forEach((drink, index) => {
+                drinks.forEach(drink => {
                     const drinkTime = new Date(drink.timestamp);
                     const minutesSinceDrink = (currentTime - drinkTime) / (1000 * 60);
-                    const hoursSinceDrink = minutesSinceDrink / 60;
 
-                    // Apply absorption curve
-                    const absorptionFactor = this.getAbsorptionFactor(minutesSinceDrink);
-                    const absorbedAlcohol = drink.gramsAlcohol * absorptionFactor;
+                    if (minutesSinceDrink < 0) return; // Future drink, skip
 
-                    totalAbsorbed += absorbedAlcohol;
-                    totalGramsForAverage += drink.gramsAlcohol;
-                    weightedTimeSum += hoursSinceDrink * drink.gramsAlcohol;
+                    // Get beverage-specific parameters
+                    const stomachFullness = drink.stomachFullness || 'empty';
+                    const beverageType = drink.beverageType || 'wine';
 
-                    console.log(`Drink ${index + 1}:`, {
-                        gramsAlcohol: drink.gramsAlcohol.toFixed(2),
-                        minutesSinceDrink: minutesSinceDrink.toFixed(1),
-                        absorptionFactor: absorptionFactor.toFixed(3),
-                        absorbedAlcohol: absorbedAlcohol.toFixed(2)
-                    });
+                    // Integrate absorption and elimination minute-by-minute
+                    let bac = 0;
+
+                    for (let t = 0; t <= minutesSinceDrink; t += 1) {
+                        // Calculate absorption rate at this minute (derivative of Weibull, units: 1/minute)
+                        const absorptionRate = this.getAbsorptionRate(t, stomachFullness, beverageType);
+
+                        // Calculate grams absorbed this minute
+                        // absorptionRate is already per minute, so multiply directly
+                        const gramsAbsorbedThisMinute = drink.gramsAlcohol * absorptionRate;
+
+                        // Convert absorbed grams to BAC increase
+                        const bacIncrease = gramsAbsorbedThisMinute / (weightKg * r * 10);
+                        bac += bacIncrease;
+
+                        // Apply Michaelis-Menten elimination for 1 minute
+                        if (bac > 0) {
+                            const eliminationRate = (Vmax * bac) / (Km + bac); // per hour
+                            const bacDecrease = eliminationRate * (1/60); // convert to per minute
+                            bac = Math.max(0, bac - bacDecrease);
+                        }
+                    }
+
+                    totalBAC += bac;
                 });
 
-                // Step 2: Calculate BAC from total absorbed alcohol
-                const bacFromAbsorption = totalAbsorbed / (weightKg * r * 10);
-
-                // Step 3: Calculate weighted average time for elimination
-                const averageTime = totalGramsForAverage > 0 ? weightedTimeSum / totalGramsForAverage : 0;
-
-                // Step 4: Subtract elimination based on average time
-                const totalBAC = Math.max(0, bacFromAbsorption - (this.eliminationRate * averageTime));
-
-                console.log('Total absorbed:', totalAbsorbed.toFixed(2), 'grams');
-                console.log('BAC from absorption:', bacFromAbsorption.toFixed(5));
-                console.log('Average time:', averageTime.toFixed(2), 'hours');
-                console.log('Elimination:', (this.eliminationRate * averageTime).toFixed(5));
-                console.log('Total BAC:', totalBAC.toFixed(5));
-                console.log('========================\n');
-
-                return totalBAC;
+                return Math.max(0, totalBAC);
             }
 
-            // Project BAC over the next 8 hours
+            // Project BAC over the next N hours using Michaelis-Menten kinetics
+            // Integrates absorption and elimination simultaneously minute-by-minute
             projectBAC(drinks, profile, hours = 8) {
                 if (!profile || !profile.weightLbs || !profile.gender) {
-                    return Array(hours * 4 + 1).fill(0);
+                    return Array(hours * 60 + 1).fill(0);
                 }
 
                 const projection = [];
                 const currentTime = new Date();
-                const intervalMinutes = 15;
-                const weightKg = profile.weightLbs * 0.453592; // Convert pounds to kilograms
-                const r = this.widmarkRatio[profile.gender] || this.widmarkRatio.other;
+                const intervalMinutes = 1;
+                const weightKg = profile.weightLbs * 0.453592;
+                const r = this.widmarkRatio[profile.gender];
 
-                // Generate data points every 15 minutes
+                // Michaelis-Menten parameters (gender-specific)
+                const Vmax = this.vmaxByGender[profile.gender];
+                const Km = this.km;
+
+                // Generate data points every minute
                 for (let i = 0; i <= hours * 60; i += intervalMinutes) {
                     const futureTime = new Date(currentTime.getTime() + i * 60 * 1000);
-
-                    // Step 1: Calculate total absorbed alcohol and weighted average time
-                    let totalAbsorbed = 0;
-                    let totalGramsForAverage = 0;
-                    let weightedTimeSum = 0;
+                    let totalBAC = 0;
 
                     drinks.forEach(drink => {
                         const drinkTime = new Date(drink.timestamp);
                         const minutesSinceDrink = (futureTime - drinkTime) / (1000 * 60);
-                        const hoursSinceDrink = minutesSinceDrink / 60;
 
-                        if (minutesSinceDrink >= 0) {
-                            const absorptionFactor = this.getAbsorptionFactor(minutesSinceDrink);
-                            const absorbedAlcohol = drink.gramsAlcohol * absorptionFactor;
+                        if (minutesSinceDrink < 0) return; // Future drink, skip
 
-                            totalAbsorbed += absorbedAlcohol;
-                            totalGramsForAverage += drink.gramsAlcohol;
-                            weightedTimeSum += hoursSinceDrink * drink.gramsAlcohol;
+                        // Get beverage-specific parameters
+                        const stomachFullness = drink.stomachFullness || 'empty';
+                        const beverageType = drink.beverageType || 'wine';
+
+                        // Integrate absorption and elimination minute-by-minute
+                        let bac = 0;
+
+                        for (let t = 0; t <= minutesSinceDrink; t += 1) {
+                            // Calculate absorption rate at this minute (derivative of Weibull, units: 1/minute)
+                            const absorptionRate = this.getAbsorptionRate(t, stomachFullness, beverageType);
+
+                            // Calculate grams absorbed this minute
+                            // absorptionRate is already per minute, so multiply directly
+                            const gramsAbsorbedThisMinute = drink.gramsAlcohol * absorptionRate;
+
+                            // Convert absorbed grams to BAC increase
+                            const bacIncrease = gramsAbsorbedThisMinute / (weightKg * r * 10);
+                            bac += bacIncrease;
+
+                            // Apply Michaelis-Menten elimination for 1 minute
+                            if (bac > 0) {
+                                const eliminationRate = (Vmax * bac) / (Km + bac); // per hour
+                                const bacDecrease = eliminationRate * (1/60); // convert to per minute
+                                bac = Math.max(0, bac - bacDecrease);
+                            }
                         }
+
+                        totalBAC += bac;
                     });
-
-                    // Step 2: Calculate BAC from total absorbed alcohol
-                    const bacFromAbsorption = totalAbsorbed / (weightKg * r * 10);
-
-                    // Step 3: Calculate weighted average time for elimination
-                    const averageTime = totalGramsForAverage > 0 ? weightedTimeSum / totalGramsForAverage : 0;
-
-                    // Step 4: Subtract elimination based on average time
-                    const totalBAC = Math.max(0, bacFromAbsorption - (this.eliminationRate * averageTime));
 
                     projection.push(totalBAC);
                 }
@@ -567,6 +697,7 @@
                 this.logger = new DrinkLogger();
                 this.calculator = new BACCalculator();
                 this.chart = null;
+                this.isMouseDown = false;
 
                 this.init();
             }
@@ -590,6 +721,27 @@
                     const arrow = document.getElementById('settingsArrow');
                     content.classList.toggle('expanded');
                     arrow.textContent = content.classList.contains('expanded') ? '▲' : '▼';
+                });
+
+                // Custom time toggle
+                document.getElementById('customTimeToggle').addEventListener('change', (e) => {
+                    const customTimeGroup = document.getElementById('customTimeGroup');
+                    const drinkTimeInput = document.getElementById('drinkTime');
+
+                    if (e.target.checked) {
+                        customTimeGroup.style.display = 'block';
+
+                        // Set default to current time
+                        const now = new Date();
+                        const year = now.getFullYear();
+                        const month = String(now.getMonth() + 1).padStart(2, '0');
+                        const day = String(now.getDate()).padStart(2, '0');
+                        const hours = String(now.getHours()).padStart(2, '0');
+                        const minutes = String(now.getMinutes()).padStart(2, '0');
+                        drinkTimeInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+                    } else {
+                        customTimeGroup.style.display = 'none';
+                    }
                 });
 
                 // Save profile
@@ -616,6 +768,7 @@
                 document.getElementById('addDrink').addEventListener('click', () => {
                     const volume = document.getElementById('volume').value;
                     const abv = document.getElementById('abv').value;
+                    const beverageType = document.getElementById('beverageType').value;
 
                     if (!volume || !abv) {
                         alert('Please enter both volume and ABV');
@@ -632,11 +785,38 @@
                         return;
                     }
 
-                    this.logger.addDrink(volume, abv);
+                    // Get custom timestamp if toggle is on
+                    let customTimestamp = null;
+                    const customTimeToggle = document.getElementById('customTimeToggle');
+                    if (customTimeToggle.checked) {
+                        const drinkTimeInput = document.getElementById('drinkTime');
+                        if (drinkTimeInput.value) {
+                            const selectedTime = new Date(drinkTimeInput.value);
+                            const now = new Date();
 
-                    // Clear inputs
-                    document.getElementById('volume').value = '';
-                    document.getElementById('abv').value = '';
+                            // Validate: not in future
+                            if (selectedTime > now) {
+                                alert('Cannot add drinks from the future!');
+                                return;
+                            }
+
+                            // Warn if > 12 hours old
+                            const twelveHoursAgo = new Date(now.getTime() - 12 * 60 * 60 * 1000);
+                            if (selectedTime < twelveHoursAgo) {
+                                if (!confirm('This drink is more than 12 hours old. Add anyway?')) {
+                                    return;
+                                }
+                            }
+
+                            customTimestamp = selectedTime.toISOString();
+                        }
+                    }
+
+                    this.logger.addDrink(volume, abv, customTimestamp, beverageType, 'empty');
+
+                    // Reset custom time toggle
+                    customTimeToggle.checked = false;
+                    document.getElementById('customTimeGroup').style.display = 'none';
 
                     this.updateDisplay();
                 });
@@ -688,18 +868,46 @@
             initChart() {
                 const ctx = document.getElementById('bacChart').getContext('2d');
 
+                // Custom scrubbing plugin
+                const scrubPlugin = {
+                    id: 'scrubPlugin',
+
+                    afterEvent(chart, args) {
+                        const event = args.event;
+
+                        // Track mouse down/up
+                        if (event.type === 'mousedown') {
+                            tracker.isMouseDown = true;
+                        } else if (event.type === 'mouseup' || event.type === 'mouseout') {
+                            tracker.isMouseDown = false;
+                            tracker.hideScrub();
+                            return;
+                        }
+
+                        // Only scrub when mouse is held down
+                        if (event.type === 'mousemove' && tracker.isMouseDown) {
+                            const chartArea = chart.chartArea;
+                            if (event.x >= chartArea.left && event.x <= chartArea.right &&
+                                event.y >= chartArea.top && event.y <= chartArea.bottom) {
+                                tracker.handleScrub(chart, event.x, event.y);
+                            }
+                        }
+                    }
+                };
+
                 this.chart = new Chart(ctx, {
                     type: 'line',
                     data: {
-                        labels: this.generateTimeLabels(),
                         datasets: [{
                             label: 'BAC %',
-                            data: [],
+                            data: [], // Will be populated with {x, y} objects
                             borderColor: '#14b8a6',
                             backgroundColor: 'rgba(20, 184, 166, 0.1)',
                             tension: 0.4,
                             fill: true,
-                            pointRadius: 3,
+                            pointRadius: 0, // Hide individual points for smooth curve
+                            pointHoverRadius: 0, // Also hide on hover
+                            pointHitRadius: 0, // Disable hit detection on points
                             pointBackgroundColor: '#14b8a6',
                             borderWidth: 3
                         }]
@@ -710,7 +918,6 @@
                         scales: {
                             y: {
                                 beginAtZero: true,
-                                max: 0.24,
                                 ticks: {
                                     callback: function(value) {
                                         return value.toFixed(3) + '%';
@@ -722,9 +929,26 @@
                                 }
                             },
                             x: {
+                                type: 'linear', // Change from category to linear scale
+                                min: 0,
+                                max: 8,
+                                ticks: {
+                                    stepSize: 1,
+                                    callback: function(value) {
+                                        // Show hour labels with timestamps
+                                        const now = new Date();
+                                        const time = new Date(now.getTime() + value * 60 * 60 * 1000);
+                                        const timeStr = time.toLocaleTimeString('en-US', {
+                                            hour: 'numeric',
+                                            minute: '2-digit',
+                                            hour12: true
+                                        });
+                                        return value === 0 ? 'Now' : `${value}hr\n${timeStr}`;
+                                    }
+                                },
                                 title: {
                                     display: true,
-                                    text: 'Time from Now'
+                                    text: 'Time from Now (with timestamps)'
                                 }
                             }
                         },
@@ -733,16 +957,9 @@
                                 display: false
                             }
                         }
-                    }
+                    },
+                    plugins: [scrubPlugin]
                 });
-            }
-
-            generateTimeLabels() {
-                const labels = ['Now'];
-                for (let i = 1; i <= 8; i++) {
-                    labels.push(i + 'hr');
-                }
-                return labels;
             }
 
             updateChart(drinks, profile) {
@@ -750,10 +967,26 @@
 
                 const projection = this.calculator.projectBAC(drinks, profile, 8);
 
-                // Sample every 4th data point (every hour instead of every 15 min)
-                const hourlyData = projection.filter((_, index) => index % 4 === 0);
+                // Use FULL 1-minute resolution data (481 points, no sampling)
+                const fullData = projection.map((bac, index) => ({
+                    x: index / 60, // Convert minute index to hours (0, 0.0167, 0.0333, ..., 8)
+                    y: bac
+                }));
 
-                this.chart.data.datasets[0].data = hourlyData;
+                // Calculate dynamic Y-axis max
+                const peakBAC = Math.max(...projection);
+                let yAxisMax;
+
+                if (peakBAC === 0) {
+                    yAxisMax = 0.08; // Default when no drinks
+                } else {
+                    // 20% headroom, rounded to nearest 0.01
+                    yAxisMax = Math.ceil((peakBAC * 1.20) * 100) / 100;
+                    yAxisMax = Math.max(yAxisMax, 0.08); // Minimum scale
+                }
+
+                this.chart.data.datasets[0].data = fullData;
+                this.chart.options.scales.y.max = yAxisMax;
 
                 // Force chart to update with animation
                 this.chart.update('active');
@@ -777,6 +1010,7 @@
                     const minutesAgo = Math.floor((Date.now() - drinkTime.getTime()) / (1000 * 60));
                     const isAbsorbing = minutesAgo < 90;
 
+                    // Relative time string
                     let timeString;
                     if (minutesAgo < 1) {
                         timeString = 'Just now';
@@ -788,11 +1022,26 @@
                         timeString = hoursAgo + ' hr' + (remainingMins > 0 ? ' ' + remainingMins + ' min' : '') + ' ago';
                     }
 
+                    // Absolute time string
+                    const absoluteTime = drinkTime.toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+
+                    // Check if drink was yesterday (midnight edge case)
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const drinkDate = new Date(drinkTime);
+                    drinkDate.setHours(0, 0, 0, 0);
+                    const isYesterday = drinkDate < today;
+                    const datePrefix = isYesterday ? 'Yesterday ' : '';
+
                     return `
                         <div class="drink-item">
                             <div class="drink-info">
                                 <div class="drink-details">${drink.volumeOz}oz • ${drink.abv}% ABV</div>
-                                <div class="drink-time ${isAbsorbing ? 'absorbing' : ''}">${timeString}${isAbsorbing ? ' (absorbing)' : ''}</div>
+                                <div class="drink-time ${isAbsorbing ? 'absorbing' : ''}">${timeString}${isAbsorbing ? ' (absorbing)' : ''} • ${datePrefix}${absoluteTime}</div>
                             </div>
                             <button class="secondary" onclick="tracker.deleteDrink(${drink.id})">Delete</button>
                         </div>
@@ -805,6 +1054,78 @@
                     this.logger.deleteDrink(id);
                     this.updateDisplay();
                 }
+            }
+
+            handleScrub(chart, mouseX, mouseY) {
+                const chartArea = chart.chartArea;
+                const xPixelRange = chartArea.right - chartArea.left;
+                const relativeX = mouseX - chartArea.left;
+
+                // Calculate time value and snap to nearest minute
+                const minutesFromNow = Math.round((relativeX / xPixelRange) * 480); // 0-480 minutes (8 hours)
+                const clampedMinutes = Math.max(0, Math.min(minutesFromNow, 480));
+
+                const profile = this.profile.getProfile();
+                const drinks = this.logger.getDrinks();
+
+                if (!profile || !profile.weightLbs || !profile.gender) {
+                    this.hideScrub();
+                    return;
+                }
+
+                // Get full 1-minute resolution projection (481 points)
+                const projection = this.calculator.projectBAC(drinks, profile, 8);
+
+                // Get BAC at this minute (no interpolation needed)
+                const bacAtPoint = projection[clampedMinutes] || 0;
+
+                // Calculate timestamp
+                const timestamp = new Date(Date.now() + clampedMinutes * 60 * 1000);
+
+                // Calculate time until zero
+                let timeUntilZero = '--';
+                if (bacAtPoint > 0) {
+                    for (let i = clampedMinutes; i < projection.length; i++) {
+                        if (projection[i] <= 0.001) {
+                            const minutesUntilZero = i - clampedMinutes;
+                            const hours = Math.floor(minutesUntilZero / 60);
+                            const mins = minutesUntilZero % 60;
+                            timeUntilZero = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+                            break;
+                        }
+                    }
+                    if (timeUntilZero === '--') timeUntilZero = '> 8 hours';
+                } else {
+                    timeUntilZero = 'Already zero';
+                }
+
+                // Format time display
+                const hours = Math.floor(clampedMinutes / 60);
+                const mins = clampedMinutes % 60;
+                const timeStr = timestamp.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+
+                let timeDisplay;
+                if (clampedMinutes === 0) {
+                    timeDisplay = 'Now';
+                } else if (mins === 0) {
+                    timeDisplay = `${hours}hr from now (${timeStr})`;
+                } else {
+                    timeDisplay = `${hours}h ${mins}m from now (${timeStr})`;
+                }
+
+                // Update display
+                document.getElementById('scrubBAC').textContent = `BAC: ${bacAtPoint.toFixed(3)}%`;
+                document.getElementById('scrubTime').textContent = `Time: ${timeDisplay}`;
+                document.getElementById('scrubZero').textContent = `Time until zero: ${timeUntilZero}`;
+                document.getElementById('scrubInfo').style.display = 'block';
+            }
+
+            hideScrub() {
+                document.getElementById('scrubInfo').style.display = 'none';
             }
         }
 

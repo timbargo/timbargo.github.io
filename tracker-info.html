@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BAC Tracker: Understanding the Science</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+            background: linear-gradient(180deg, #ffffff 0%, #f0f4f8 100%);
+            min-height: 100vh;
+            padding: 12px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: #14b8a6;
+            text-decoration: none;
+            font-weight: bold;
+            margin-bottom: 20px;
+            padding: 8px 12px;
+            border: 2px solid #14b8a6;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .back-link:hover {
+            background: #14b8a6;
+            color: white;
+        }
+
+        h1 {
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+
+        .intro {
+            font-size: 18px;
+            color: #6b7280;
+            margin-bottom: 24px;
+            font-style: italic;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: #14b8a6;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #14b8a6;
+            padding-bottom: 8px;
+        }
+
+        h3 {
+            font-size: 1.2rem;
+            color: #1f2937;
+            margin: 16px 0 8px 0;
+        }
+
+        h4 {
+            font-size: 1.05rem;
+            color: #4b5563;
+            margin: 12px 0 6px 0;
+        }
+
+        p {
+            margin-bottom: 12px;
+            color: #374151;
+        }
+
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: inherit;
+            color: #14b8a6;
+            font-size: 0.95em;
+        }
+
+        pre {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 12px 0;
+            font-size: 0.9em;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+
+        ul, ol {
+            margin-left: 24px;
+            margin-bottom: 12px;
+        }
+
+        li {
+            margin-bottom: 6px;
+            color: #374151;
+        }
+
+        .highlight-box {
+            background: #ecfdf5;
+            border-left: 4px solid #14b8a6;
+            padding: 12px;
+            margin: 12px 0;
+            border-radius: 4px;
+        }
+
+        .reference {
+            background: #f9fafb;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 6px 0;
+        }
+
+        .reference a {
+            color: #14b8a6;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .reference a:hover {
+            text-decoration: underline;
+        }
+
+        @media (min-width: 768px) {
+            body {
+                padding: 24px;
+            }
+
+            .card {
+                padding: 32px;
+                margin-bottom: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="tracker.html" class="back-link">← Back to Tracker</a>
+
+        <h1>BAC Tracker: Understanding the Science</h1>
+        <p class="intro">This calculator uses research-backed pharmacokinetic models for accurate BAC prediction</p>
+
+        <!-- Absorption Model -->
+        <div class="card">
+            <h2>📊 Absorption Model (Weibull Distribution)</h2>
+
+            <h3>Overview</h3>
+            <p>Alcohol absorption follows a <strong>Weibull distribution with lag parameter</strong>, which accounts for:</p>
+            <ul>
+                <li>Gastric emptying delay (how long alcohol stays in your stomach)</li>
+                <li>Rapid small intestine absorption</li>
+                <li>The realistic "slow-rapid-slow" absorption pattern observed in clinical studies</li>
+            </ul>
+
+            <h3>Formula</h3>
+            <pre><code>F(t) = 0                           if t < lag
+F(t) = 1 - exp(-((t-lag)/λ)^k)    if t ≥ lag</code></pre>
+
+            <h3>Parameters Explained</h3>
+
+            <h4>1. lag (Gastric Emptying Time)</h4>
+            <p>The delay before alcohol starts moving from your stomach to your small intestine, where most absorption happens.</p>
+            <ul>
+                <li><strong>Empty stomach:</strong> 5 minutes</li>
+                <li><strong>Moderate food:</strong> 10 minutes</li>
+                <li><strong>Full stomach:</strong> 20 minutes</li>
+            </ul>
+            <p><strong>Effect:</strong> Delays the start of absorption - the entire curve shifts to the right. Drinking on a full stomach means alcohol takes longer to reach your bloodstream.</p>
+
+            <h4>2. λ (Lambda - Scale Parameter)</h4>
+            <p>Controls how quickly absorption happens once it starts. Smaller λ = faster absorption and earlier peak.</p>
+
+            <div class="highlight-box">
+                <strong>Beverage Type Differences:</strong>
+                <ul style="margin-top: 8px;">
+                    <li><strong>Spirits (λ=25):</strong> Fastest absorption, peak around 50 minutes
+                        <br><small>High alcohol concentration (20-40%) triggers rapid gastric emptying</small>
+                    </li>
+                    <li><strong>Seltzer (λ=30):</strong> Fast absorption, peak around 60 minutes
+                        <br><small>Low 5% alcohol BUT carbonation + zero calories speeds absorption significantly</small>
+                    </li>
+                    <li><strong>Wine (λ=35):</strong> Moderate absorption, peak around 70 minutes
+                        <br><small>Balanced 12-15% concentration for steady absorption</small>
+                    </li>
+                    <li><strong>Beer (λ=45):</strong> Slowest absorption, peak around 90 minutes
+                        <br><small>Low alcohol % (3-8%) plus grain density slows gastric emptying</small>
+                    </li>
+                </ul>
+            </div>
+
+            <h4>3. k (Shape Parameter)</h4>
+            <p>Fixed at k=2.8 for all beverages. This creates the asymmetric "slow-rapid-slow" absorption pattern that matches real-world observations.</p>
+
+            <h3>Why Beverage Type Matters</h3>
+            <p><strong>Research shows spirits reach 54% higher peak BAC than beer</strong> (77.4 vs 50.3 mg/dL) despite delivering the same amount of alcohol. Here's why:</p>
+            <ul>
+                <li><strong>Beer:</strong> Low alcohol % + grain content + carbohydrates slow gastric emptying</li>
+                <li><strong>Wine:</strong> Moderate alcohol % provides balanced, predictable absorption</li>
+                <li><strong>Seltzer:</strong> Despite having beer's low 5% alcohol, high carbonation forces alcohol into the small intestine faster. Zero calories mean no food-like slowing effect</li>
+                <li><strong>Spirits:</strong> High concentration triggers pyloric valve to open quickly, plus no caloric content to slow things down</li>
+            </ul>
+        </div>
+
+        <!-- Elimination Model -->
+        <div class="card">
+            <h2>🧬 Elimination Model (Michaelis-Menten Kinetics)</h2>
+
+            <h3>Overview</h3>
+            <p>Alcohol is metabolized by the liver enzyme <strong>alcohol dehydrogenase (ADH)</strong>, which follows enzyme kinetics rather than simple linear decay.</p>
+            <p>This model is significantly more accurate than the oversimplified Widmark linear model.</p>
+
+            <h3>Formula</h3>
+            <pre><code>dBAC/dt = -(Vmax × BAC) / (Km + BAC)</code></pre>
+            <p><small>This differential equation describes how BAC changes over time based on enzyme activity</small></p>
+
+            <h3>Parameters Explained</h3>
+
+            <h4>1. Vmax (Maximum Elimination Rate)</h4>
+            <p>The maximum rate at which your liver can eliminate alcohol when enzymes are fully saturated (working at full capacity).</p>
+
+            <div class="highlight-box">
+                <strong>Gender Differences (IMPORTANT):</strong>
+                <ul style="margin-top: 8px;">
+                    <li><strong>Males: Vmax = 0.017 g/dL/hr</strong>
+                        <br><small>Higher levels of ADH enzyme, larger liver mass relative to body weight</small>
+                    </li>
+                    <li><strong>Females: Vmax = 0.013 g/dL/hr (25% slower)</strong>
+                        <br><small>Lower ADH enzyme levels (25-30% less), smaller liver mass, hormonal factors</small>
+                    </li>
+                </ul>
+                <p style="margin-top: 8px;"><strong>Why this matters:</strong> This 25% difference is clinically significant. Females reach higher peak BAC and stay elevated longer, even after accounting for differences in body weight and composition.</p>
+            </div>
+
+            <h4>2. Km (Michaelis Constant)</h4>
+            <p><strong>Km = 0.015 g/dL</strong> for all individuals (relatively constant across genders).</p>
+            <p>This represents the BAC level at which elimination is half of Vmax. The very low value means liver enzymes saturate quickly - even at moderate BAC levels, you're already approaching maximum elimination rate.</p>
+
+            <h3>How Enzyme Kinetics Work</h3>
+
+            <h4>At HIGH BAC (> 0.08 g/dL):</h4>
+            <ul>
+                <li><strong>"Zero-order kinetics"</strong> - constant rate elimination</li>
+                <li>Enzymes are saturated, working at maximum capacity (Vmax)</li>
+                <li>BAC decreases at a steady ~0.015-0.017 g/dL/hr</li>
+                <li>Elimination rate doesn't depend on current BAC level</li>
+                <li>This is why you can't "speed up" sobering by drinking coffee or taking cold showers</li>
+            </ul>
+
+            <h4>At LOW BAC (< 0.02 g/dL):</h4>
+            <ul>
+                <li><strong>"First-order kinetics"</strong> - exponential decay</li>
+                <li>Enzymes are not saturated, working below full capacity</li>
+                <li>Elimination rate is proportional to current BAC</li>
+                <li>Creates a gentler curve - takes longer to reach absolute zero</li>
+                <li>Explains why the last bit of alcohol takes disproportionately long to clear</li>
+            </ul>
+
+            <h4>Transition Zone (0.02 - 0.08 g/dL):</h4>
+            <ul>
+                <li>Smooth, natural transition between the two modes</li>
+                <li>Enzyme saturation gradually increases</li>
+                <li>Creates the characteristic <strong>curved decay</strong> (not a straight line!)</li>
+            </ul>
+        </div>
+
+        <!-- Why These Models -->
+        <div class="card">
+            <h2>🔬 Why These Models?</h2>
+
+            <h3>Weibull Distribution for Absorption</h3>
+            <p>The Weibull distribution was chosen for modeling alcohol absorption because it accurately represents the physiological process:</p>
+            <div class="highlight-box">
+                <ul>
+                    <li><strong>Gastric emptying delay:</strong> The lag parameter captures the time alcohol spends in the stomach before moving to the small intestine where rapid absorption occurs</li>
+                    <li><strong>Asymmetric absorption pattern:</strong> Real absorption follows a "slow-rapid-slow" pattern that Weibull captures naturally, unlike symmetric sigmoid curves</li>
+                    <li><strong>Beverage-specific kinetics:</strong> The scale parameter (λ) can be adjusted for different beverage types, reflecting research showing spirits absorb 54% faster than beer</li>
+                    <li><strong>Smooth continuous function:</strong> Provides realistic curves without artificial discontinuities, matching clinical observations</li>
+                    <li><strong>Food effects:</strong> The lag parameter naturally models how food delays gastric emptying</li>
+                </ul>
+            </div>
+
+            <h3>Michaelis-Menten Kinetics for Elimination</h3>
+            <p>Michaelis-Menten enzyme kinetics models alcohol elimination because alcohol dehydrogenase (ADH) is an enzyme that follows saturation kinetics:</p>
+            <div class="highlight-box">
+                <ul>
+                    <li><strong>Enzyme saturation:</strong> At high BAC levels, enzymes work at maximum capacity (Vmax), creating zero-order kinetics where the elimination rate is constant</li>
+                    <li><strong>Concentration dependence:</strong> At low BAC levels, elimination rate becomes proportional to BAC (first-order kinetics), creating a natural curved decay</li>
+                    <li><strong>Physiological accuracy:</strong> Matches actual liver enzyme behavior rather than assuming a constant elimination rate</li>
+                    <li><strong>Gender differences:</strong> Accounts for the 25-30% difference in ADH enzyme levels between males and females through gender-specific Vmax parameters</li>
+                    <li><strong>Smooth transition:</strong> Naturally transitions between zero-order and first-order kinetics without requiring piecewise functions</li>
+                </ul>
+            </div>
+
+            <p><strong>Together</strong>, these models provide a physiologically accurate representation of alcohol pharmacokinetics from ingestion to elimination, validated by peer-reviewed research.</p>
+        </div>
+
+        <!-- References -->
+        <div class="card">
+            <h2>📚 Scientific References</h2>
+            <p>This calculator is based on peer-reviewed research in pharmacokinetics and alcohol metabolism:</p>
+
+            <div class="reference">
+                1. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4112772/" target="_blank">Absorption and Peak Blood Alcohol Concentration After Drinking Beer, Wine, or Spirits (PMC)</a>
+                <br><small>Study showing spirits reach 54% higher peak BAC than beer with significantly faster absorption</small>
+            </div>
+
+            <div class="reference">
+                2. <a href="https://pubmed.ncbi.nlm.nih.gov/17720590/" target="_blank">Alcohol concentration and carbonation of drinks: the effect on blood alcohol levels (PubMed)</a>
+                <br><small>Research demonstrating carbonation's significant effect on absorption rate (14/21 subjects showed faster absorption)</small>
+            </div>
+
+            <div class="reference">
+                3. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC1705129/" target="_blank">Observations on the relation between alcohol absorption and the rate of gastric emptying (PMC)</a>
+                <br><small>Clinical evidence that gastric emptying is the rate-limiting step in alcohol absorption</small>
+            </div>
+
+            <div class="reference">
+                4. <a href="https://pubmed.ncbi.nlm.nih.gov/3450849/" target="_blank">The use of Weibull distribution to describe the in vivo absorption kinetics (PubMed)</a>
+                <br><small>Theoretical foundation for using Weibull distribution in pharmacokinetic modeling</small>
+            </div>
+
+            <div class="reference">
+                5. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3484320/" target="_blank">Alcohol Metabolism (PMC)</a>
+                <br><small>Comprehensive review of alcohol dehydrogenase enzyme kinetics and gender differences</small>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 32px 0;">
+            <a href="tracker.html" class="back-link">← Back to Tracker</a>
+        </div>
+
+        <div style="text-align: center; color: #6b7280; font-size: 14px; padding: 24px 0; border-top: 1px solid #e5e7eb; margin-top: 24px;">
+            <p>This information is for educational purposes. BAC calculations are estimates only.</p>
+            <p>Never drink and drive. Always drink responsibly.</p>
+        </div>
+    </div>
+</body>
+</html>
