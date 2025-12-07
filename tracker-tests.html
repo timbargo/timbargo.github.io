@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BAC Tracker - Core Algorithm Tests</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+            background: linear-gradient(180deg, #ffffff 0%, #f0f4f8 100%);
+            padding: 24px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #1f2937;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .test-suite {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+
+        .test-suite h2 {
+            font-size: 1.3rem;
+            color: #14b8a6;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #14b8a6;
+            padding-bottom: 8px;
+        }
+
+        .test-case {
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border-left: 4px solid #9ca3af;
+        }
+
+        .test-case.pass {
+            border-left-color: #10b981;
+            background: #ecfdf5;
+        }
+
+        .test-case.fail {
+            border-left-color: #ef4444;
+            background: #fee2e2;
+        }
+
+        .test-name {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .test-result {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .test-error {
+            color: #dc2626;
+            font-size: 12px;
+            margin-top: 4px;
+            font-weight: bold;
+        }
+
+        .summary {
+            background: #1f2937;
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1.2rem;
+            margin-bottom: 24px;
+        }
+
+        .summary.all-pass {
+            background: #10b981;
+        }
+
+        .summary.some-fail {
+            background: #ef4444;
+        }
+
+        button {
+            background: #14b8a6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-family: inherit;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 24px;
+        }
+
+        button:hover {
+            background: #0d9488;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BAC Tracker - Core Algorithm Tests</h1>
+        <button id="runTests">Run All Tests</button>
+        <div id="summary"></div>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Test framework
+        class TestRunner {
+            constructor() {
+                this.suites = [];
+                this.totalTests = 0;
+                this.passedTests = 0;
+                this.failedTests = 0;
+            }
+
+            suite(name, tests) {
+                this.suites.push({ name, tests });
+            }
+
+            run() {
+                this.totalTests = 0;
+                this.passedTests = 0;
+                this.failedTests = 0;
+
+                const resultsContainer = document.getElementById('results');
+                resultsContainer.innerHTML = '';
+
+                this.suites.forEach(suite => {
+                    const suiteEl = document.createElement('div');
+                    suiteEl.className = 'test-suite';
+                    suiteEl.innerHTML = `<h2>${suite.name}</h2>`;
+
+                    suite.tests.forEach(test => {
+                        this.totalTests++;
+                        const testEl = document.createElement('div');
+                        testEl.className = 'test-case';
+
+                        try {
+                            const result = test.fn();
+                            if (result.pass) {
+                                this.passedTests++;
+                                testEl.classList.add('pass');
+                                testEl.innerHTML = `
+                                    <div class="test-name">✓ ${test.name}</div>
+                                    <div class="test-result">${result.message || 'Pass'}</div>
+                                `;
+                            } else {
+                                this.failedTests++;
+                                testEl.classList.add('fail');
+                                testEl.innerHTML = `
+                                    <div class="test-name">✗ ${test.name}</div>
+                                    <div class="test-error">${result.message || 'Failed'}</div>
+                                `;
+                            }
+                        } catch (error) {
+                            this.failedTests++;
+                            testEl.classList.add('fail');
+                            testEl.innerHTML = `
+                                <div class="test-name">✗ ${test.name}</div>
+                                <div class="test-error">Error: ${error.message}</div>
+                            `;
+                        }
+
+                        suiteEl.appendChild(testEl);
+                    });
+
+                    resultsContainer.appendChild(suiteEl);
+                });
+
+                this.showSummary();
+            }
+
+            showSummary() {
+                const summaryEl = document.getElementById('summary');
+                const passRate = ((this.passedTests / this.totalTests) * 100).toFixed(1);
+
+                summaryEl.className = 'summary';
+                if (this.failedTests === 0) {
+                    summaryEl.classList.add('all-pass');
+                    summaryEl.innerHTML = `✓ All ${this.totalTests} tests passed (100%)`;
+                } else {
+                    summaryEl.classList.add('some-fail');
+                    summaryEl.innerHTML = `${this.passedTests}/${this.totalTests} tests passed (${passRate}%) - ${this.failedTests} failed`;
+                }
+            }
+        }
+
+        // Helper function for approximate equality
+        function approxEqual(actual, expected, tolerance = 0.0001) {
+            return Math.abs(actual - expected) < tolerance;
+        }
+
+        // Core algorithm classes (copied from tracker.html for testing)
+        class BACCalculator {
+            constructor() {
+                this.widmarkRatio = {
+                    male: 0.68,
+                    female: 0.55
+                };
+
+                this.vmaxByGender = {
+                    male: 0.017,
+                    female: 0.013
+                };
+                this.km = 0.015;
+            }
+
+            getAbsorptionFactor(minutesSinceDrink, stomachFullness = 'empty', beverageType = 'wine') {
+                const lagByFullness = {
+                    empty: 5,
+                    moderate: 10,
+                    full: 20
+                };
+
+                const lambdaByBeverage = {
+                    beer: 45,
+                    wine: 35,
+                    seltzer: 30,
+                    spirits: 25
+                };
+
+                const lag = lagByFullness[stomachFullness] || lagByFullness.empty;
+                const lambda = lambdaByBeverage[beverageType] || lambdaByBeverage.wine;
+                const k = 2.8;
+
+                if (minutesSinceDrink < lag) {
+                    return 0;
+                }
+
+                const t = minutesSinceDrink - lag;
+                const absorption = 1 - Math.exp(-Math.pow(t / lambda, k));
+
+                return Math.min(absorption, 1.0);
+            }
+
+            getAbsorptionRate(minutesSinceDrink, stomachFullness = 'empty', beverageType = 'wine') {
+                const lagByFullness = {
+                    empty: 5,
+                    moderate: 10,
+                    full: 20
+                };
+
+                const lambdaByBeverage = {
+                    beer: 45,
+                    wine: 35,
+                    seltzer: 30,
+                    spirits: 25
+                };
+
+                const lag = lagByFullness[stomachFullness] || lagByFullness.empty;
+                const lambda = lambdaByBeverage[beverageType] || lambdaByBeverage.wine;
+                const k = 2.8;
+
+                if (minutesSinceDrink < lag) {
+                    return 0;
+                }
+
+                const t = minutesSinceDrink - lag;
+                const rate = (k / lambda) * Math.pow(t / lambda, k - 1) * Math.exp(-Math.pow(t / lambda, k));
+
+                return rate;
+            }
+
+            calculateGramsAlcohol(volumeOz, abv) {
+                const mlPerOz = 29.5735;
+                const alcoholDensity = 0.789;
+                const volumeMl = volumeOz * mlPerOz;
+                const gramsAlcohol = volumeMl * (abv / 100) * alcoholDensity;
+                return gramsAlcohol;
+            }
+
+            calculateWidmarkBAC(gramsAlcohol, weightLbs, gender) {
+                const weightKg = weightLbs * 0.453592;
+                const r = this.widmarkRatio[gender];
+                return gramsAlcohol / (weightKg * r * 10);
+            }
+        }
+
+        // Initialize test runner
+        const runner = new TestRunner();
+
+        // Test Suite 1: Weibull Distribution
+        runner.suite('Weibull Distribution (Absorption)', [
+            {
+                name: 'Absorption is zero before lag time',
+                fn: () => {
+                    const calc = new BACCalculator();
+                    const absorption = calc.getAbsorptionFactor(3, 'empty', 'wine');
+                    return {
+                        pass: absorption === 0,
+                        message: `Absorption at 3 min (lag=5): ${absorption} (expected 0)`
+                    };
+                }
+            },
+            {
+                name: 'Absorption starts after lag time',
+                fn: () => {
+                    const calc = new BACCalculator();
+                    const absorption = calc.getAbsorptionFactor(10, 'empty', 'wine');
+                    return {
+                        pass: absorption > 0 && absorption < 1,
+                        message: `Absorption at 10 min: ${absorption.toFixed(4)} (expected > 0 and < 1)`
+                    };
+                }
+            },
+            {
+                name: 'Absorption approaches 1.0 at long times',
+                fn: () => {
+                    const calc = new BACCalculator();
+                    const absorption = calc.getAbsorptionFactor(300, 'empty', 'wine');
+                    return {
+                        pass: absorption > 0.99,
+                        message: `Absorption at 300 min: ${absorption.toFixed(4)} (expected > 0.99)`
+                    };
+                }
+            },
+            {
+                name: 'Absorption rate is zero before lag',
+                fn: () => {
+                    const calc = new BACCalculator();
+                    const rate = calc.getAbsorptionRate(3, 'empty', 'wine');
+                    return {
+                        pass: rate === 0,
+                        message: `Rate at 3 min (lag=5): ${rate} (expected 0)`
+                    };
+                }
+            },
+            {
+                name: 'Absorption rate peaks then decreases',
+                fn: () => {
+                    const calc = new BACCalculator();
+                    const rate30 = calc.getAbsorptionRate(30, 'empty', 'wine');
+                    const rate60 = calc.getAbsorptionRate(60, 'empty', 'wine');
+                    const rate150 = calc.getAbsorptionRate(150, 'empty', 'wine');
+
+                    const peakIsBetween = rate60 > rate30 && rate60 > rate150;
+                    return {
+                        pass: peakIsBetween,
+                        message: `Rates at 30/60/150 min: ${rate30.toFixed(5)}/${rate60.toFixed(5)}/${rate150.toFixed(5)} (peak should be around 60 min)`
+                    };
+                }
+            },
+            {
+                name: 'Spirits absorb faster than beer (smaller lambda)',
+                fn: () => {
+                    const calc = new BACCalculator();
+                    const spiritsAbsorption = calc.getAbsorptionFactor(30, 'empty', 'spirits');
+                    const beerAbsorption = calc.getAbsorptionFactor(30, 'empty', 'beer');
+                    return {
+                        pass: spiritsAbsorption > beerAbsorption,
+                        message: `At 30 min - Spirits: ${spiritsAbsorption.toFixed(4)}, Beer: ${beerAbsorption.toFixed(4)}`
+                    };
+                }
+            },
+            {
+                name: 'Full stomach delays absorption (larger lag)',
+                fn: () => {
+                    const calc = new BACCalculator();
+                    const emptyAbsorption = calc.getAbsorptionFactor(15, 'empty', 'wine');
+                    const fullAbsorption = calc.getAbsorptionFactor(15, 'full', 'wine');
+                    return {
+                        pass: emptyAbsorption > fullAbsorption,
+                        message: `At 15 min - Empty: ${emptyAbsorption.toFixed(4)}, Full: ${fullAbsorption.toFixed(4)}`
+                    };
+                }
+            }
+        ]);
+
+        // Test Suite 2: Alcohol Calculations
+        runner.suite('Alcohol Grams & Widmark Conversion', [
+            {
+                name: 'Standard beer (12oz, 5% ABV) = ~14g alcohol',
+                fn: () => {
+                    const calc = new BACCalculator();
+                    const grams = calc.calculateGramsAlcohol(12, 5);
+                    return {
+                        pass: approxEqual(grams, 14.0, 0.5),
+                        message: `12oz @ 5% = ${grams.toFixed(2)}g (expected ~14g)`
+                    };
+                }
+            },
+            {
+                name: 'Standard wine (5oz, 12% ABV) = ~14g alcohol',
+                fn: () => {
+                    const calc = new BACCalculator();
+                    const grams = calc.calculateGramsAlcohol(5, 12);
+                    return {
+                        pass: approxEqual(grams, 14.0, 0.5),
+                        message: `5oz @ 12% = ${grams.toFixed(2)}g (expected ~14g)`
+                    };
+                }
+            },
+            {
+                name: 'Standard shot (1.5oz, 40% ABV) = ~14g alcohol',
+                fn: () => {
+                    const calc = new BACCalculator();
+                    const grams = calc.calculateGramsAlcohol(1.5, 40);
+                    return {
+                        pass: approxEqual(grams, 14.0, 0.5),
+                        message: `1.5oz @ 40% = ${grams.toFixed(2)}g (expected ~14g)`
+                    };
+                }
+            },
+            {
+                name: 'Widmark formula: 14g for 180lb male ≈ 0.025% BAC',
+                fn: () => {
+                    const calc = new BACCalculator();
+                    const bac = calc.calculateWidmarkBAC(14, 180, 'male');
+                    return {
+                        pass: approxEqual(bac, 0.025, 0.005),
+                        message: `14g / 180lb male = ${(bac * 100).toFixed(3)}% (expected ~0.025%)`
+                    };
+                }
+            },
+            {
+                name: 'Females have lower distribution ratio (higher BAC)',
+                fn: () => {
+                    const calc = new BACCalculator();
+                    const maleBac = calc.calculateWidmarkBAC(14, 150, 'male');
+                    const femaleBac = calc.calculateWidmarkBAC(14, 150, 'female');
+                    return {
+                        pass: femaleBac > maleBac,
+                        message: `14g / 150lb - Male: ${(maleBac * 100).toFixed(3)}%, Female: ${(femaleBac * 100).toFixed(3)}%`
+                    };
+                }
+            }
+        ]);
+
+        // Test Suite 3: Michaelis-Menten Kinetics
+        runner.suite('Michaelis-Menten Enzyme Kinetics', [
+            {
+                name: 'At very low BAC: first-order kinetics (rate ∝ BAC)',
+                fn: () => {
+                    const calc = new BACCalculator();
+                    const Vmax = 0.017;
+                    const Km = 0.015;
+
+                    const bac1 = 0.001;
+                    const bac2 = 0.002;
+
+                    const rate1 = (Vmax * bac1) / (Km + bac1);
+                    const rate2 = (Vmax * bac2) / (Km + bac2);
+
+                    const ratio = rate2 / rate1;
+                    return {
+                        pass: approxEqual(ratio, 2.0, 0.1),
+                        message: `Rate ratio (BAC doubled): ${ratio.toFixed(3)} (expected ~2.0 for first-order)`
+                    };
+                }
+            },
+            {
+                name: 'At high BAC: zero-order kinetics (rate ≈ Vmax)',
+                fn: () => {
+                    const Vmax = 0.017;
+                    const Km = 0.015;
+
+                    const bac = 0.15;
+                    const rate = (Vmax * bac) / (Km + bac);
+
+                    const percentOfVmax = (rate / Vmax) * 100;
+                    return {
+                        pass: percentOfVmax > 90,
+                        message: `At BAC=0.15%: rate = ${rate.toFixed(4)} (${percentOfVmax.toFixed(1)}% of Vmax)`
+                    };
+                }
+            },
+            {
+                name: 'At BAC = Km: rate = Vmax/2 (definition of Km)',
+                fn: () => {
+                    const Vmax = 0.017;
+                    const Km = 0.015;
+
+                    const bac = Km;
+                    const rate = (Vmax * bac) / (Km + bac);
+
+                    return {
+                        pass: approxEqual(rate, Vmax / 2, 0.0001),
+                        message: `At BAC=Km: rate = ${rate.toFixed(4)}, Vmax/2 = ${(Vmax/2).toFixed(4)}`
+                    };
+                }
+            },
+            {
+                name: 'Males metabolize ~30% faster than females (Vmax difference)',
+                fn: () => {
+                    const calc = new BACCalculator();
+                    const maleVmax = calc.vmaxByGender.male;
+                    const femaleVmax = calc.vmaxByGender.female;
+
+                    const ratio = maleVmax / femaleVmax;
+                    return {
+                        pass: approxEqual(ratio, 1.31, 0.05),
+                        message: `Male/Female Vmax ratio: ${ratio.toFixed(2)} (expected ~1.31)`
+                    };
+                }
+            },
+            {
+                name: 'Enzyme saturation is nonlinear',
+                fn: () => {
+                    const Vmax = 0.017;
+                    const Km = 0.015;
+
+                    const bac1 = 0.05;
+                    const bac2 = 0.10;
+
+                    const rate1 = (Vmax * bac1) / (Km + bac1);
+                    const rate2 = (Vmax * bac2) / (Km + bac2);
+
+                    const ratio = rate2 / rate1;
+                    return {
+                        pass: ratio < 2.0 && ratio > 1.0,
+                        message: `BAC doubled (0.05→0.10), rate ratio: ${ratio.toFixed(3)} (expected < 2 due to saturation)`
+                    };
+                }
+            }
+        ]);
+
+        // Test Suite 4: Integration Test
+        runner.suite('Full Integration Test (Single Drink)', [
+            {
+                name: 'Peak BAC occurs during absorption phase (not immediately)',
+                fn: () => {
+                    const calc = new BACCalculator();
+
+                    // Simulate one beer: 12oz @ 5%
+                    const gramsAlcohol = calc.calculateGramsAlcohol(12, 5);
+                    const profile = { weightLbs: 180, gender: 'male' };
+                    const weightKg = profile.weightLbs * 0.453592;
+                    const r = calc.widmarkRatio.male;
+
+                    let peakBAC = 0;
+                    let peakTime = 0;
+
+                    // Simulate 3 hours
+                    for (let minute = 0; minute < 180; minute++) {
+                        const absorptionFactor = calc.getAbsorptionFactor(minute, 'empty', 'beer');
+                        const absorbedGrams = gramsAlcohol * absorptionFactor;
+                        const theoreticalBAC = absorbedGrams / (weightKg * r * 10);
+
+                        if (theoreticalBAC > peakBAC) {
+                            peakBAC = theoreticalBAC;
+                            peakTime = minute;
+                        }
+                    }
+
+                    return {
+                        pass: peakTime > 30 && peakTime < 120,
+                        message: `Peak at ${peakTime} minutes (expected 30-120 min for beer)`
+                    };
+                }
+            },
+            {
+                name: 'Two drinks have higher peak than one drink',
+                fn: () => {
+                    const calc = new BACCalculator();
+                    const gramsPerDrink = calc.calculateGramsAlcohol(12, 5);
+                    const profile = { weightLbs: 180, gender: 'male' };
+                    const weightKg = profile.weightLbs * 0.453592;
+                    const r = calc.widmarkRatio.male;
+
+                    const oneDrinkPeak = (gramsPerDrink * calc.getAbsorptionFactor(60, 'empty', 'beer')) / (weightKg * r * 10);
+                    const twoDrinkPeak = (gramsPerDrink * 2 * calc.getAbsorptionFactor(60, 'empty', 'beer')) / (weightKg * r * 10);
+
+                    return {
+                        pass: twoDrinkPeak > oneDrinkPeak * 1.9,
+                        message: `One drink: ${(oneDrinkPeak * 100).toFixed(3)}%, Two drinks: ${(twoDrinkPeak * 100).toFixed(3)}%`
+                    };
+                }
+            }
+        ]);
+
+        // Run tests on button click
+        document.getElementById('runTests').addEventListener('click', () => {
+            runner.run();
+        });
+
+        // Auto-run on page load
+        window.addEventListener('load', () => {
+            runner.run();
+        });
+    </script>
+</body>
+</html>

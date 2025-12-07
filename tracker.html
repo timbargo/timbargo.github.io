@@ -350,6 +350,15 @@
             </div>
 
             <div class="form-group">
+                <label for="stomachFullness">Stomach Fullness</label>
+                <select id="stomachFullness">
+                    <option value="empty" selected>Empty stomach (fastest absorption)</option>
+                    <option value="moderate">Some food (moderate absorption)</option>
+                    <option value="full">Full meal (slowest absorption)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
                 <label for="volume">Volume (oz)</label>
                 <input type="number" id="volume" inputmode="decimal" min="0.25" max="64" step="0.25" placeholder="e.g., 12">
             </div>
@@ -564,6 +573,7 @@
 
             // Calculate current BAC from all drinks using Michaelis-Menten kinetics
             // Integrates absorption and elimination simultaneously minute-by-minute
+            // CRITICAL: Elimination must be applied to TOTAL BAC, not individual drinks
             calculateCurrentBAC(drinks, profile) {
                 if (!profile || !profile.weightLbs || !profile.gender) {
                     return 0;
@@ -577,58 +587,68 @@
                 const Vmax = this.vmaxByGender[profile.gender];
                 const Km = this.km;
 
-                // Process each drink separately, then sum
-                let totalBAC = 0;
-
+                // Find the earliest drink time to determine integration range
+                let earliestTime = currentTime;
                 drinks.forEach(drink => {
                     const drinkTime = new Date(drink.timestamp);
-                    const minutesSinceDrink = (currentTime - drinkTime) / (1000 * 60);
-
-                    if (minutesSinceDrink < 0) return; // Future drink, skip
-
-                    // Get beverage-specific parameters
-                    const stomachFullness = drink.stomachFullness || 'empty';
-                    const beverageType = drink.beverageType || 'wine';
-
-                    // Integrate absorption and elimination minute-by-minute
-                    let bac = 0;
-
-                    for (let t = 0; t <= minutesSinceDrink; t += 1) {
-                        // Calculate absorption rate at this minute (derivative of Weibull, units: 1/minute)
-                        const absorptionRate = this.getAbsorptionRate(t, stomachFullness, beverageType);
-
-                        // Calculate grams absorbed this minute
-                        // absorptionRate is already per minute, so multiply directly
-                        const gramsAbsorbedThisMinute = drink.gramsAlcohol * absorptionRate;
-
-                        // Convert absorbed grams to BAC increase
-                        const bacIncrease = gramsAbsorbedThisMinute / (weightKg * r * 10);
-                        bac += bacIncrease;
-
-                        // Apply Michaelis-Menten elimination for 1 minute
-                        if (bac > 0) {
-                            const eliminationRate = (Vmax * bac) / (Km + bac); // per hour
-                            const bacDecrease = eliminationRate * (1/60); // convert to per minute
-                            bac = Math.max(0, bac - bacDecrease);
-                        }
+                    if (drinkTime < earliestTime && drinkTime <= currentTime) {
+                        earliestTime = drinkTime;
                     }
-
-                    totalBAC += bac;
                 });
+
+                const totalMinutes = Math.ceil((currentTime - earliestTime) / (1000 * 60));
+                if (totalMinutes <= 0) return 0;
+
+                // Integrate all drinks together with elimination applied to combined BAC
+                let totalBAC = 0;
+
+                for (let minute = 0; minute <= totalMinutes; minute += 1) {
+                    const currentSimTime = new Date(earliestTime.getTime() + minute * 60 * 1000);
+
+                    // Calculate absorption from ALL drinks at this minute
+                    let totalAbsorption = 0;
+
+                    drinks.forEach(drink => {
+                        const drinkTime = new Date(drink.timestamp);
+                        const minutesSinceDrink = (currentSimTime - drinkTime) / (1000 * 60);
+
+                        if (minutesSinceDrink < 0) return; // Drink hasn't happened yet
+
+                        const stomachFullness = drink.stomachFullness || 'empty';
+                        const beverageType = drink.beverageType || 'wine';
+
+                        // Get absorption rate for this drink at this time
+                        const absorptionRate = this.getAbsorptionRate(minutesSinceDrink, stomachFullness, beverageType);
+                        const gramsAbsorbedThisMinute = drink.gramsAlcohol * absorptionRate;
+                        const bacIncrease = gramsAbsorbedThisMinute / (weightKg * r * 10);
+
+                        totalAbsorption += bacIncrease;
+                    });
+
+                    // Add absorption from all drinks
+                    totalBAC += totalAbsorption;
+
+                    // Apply Michaelis-Menten elimination to TOTAL BAC (enzyme saturation depends on total concentration)
+                    if (totalBAC > 0) {
+                        const eliminationRate = (Vmax * totalBAC) / (Km + totalBAC);
+                        const bacDecrease = eliminationRate * (1/60);
+                        totalBAC = Math.max(0, totalBAC - bacDecrease);
+                    }
+                }
 
                 return Math.max(0, totalBAC);
             }
 
             // Project BAC over the next N hours using Michaelis-Menten kinetics
             // Integrates absorption and elimination simultaneously minute-by-minute
+            // CRITICAL: Elimination must be applied to TOTAL BAC, not individual drinks
             projectBAC(drinks, profile, hours = 8) {
                 if (!profile || !profile.weightLbs || !profile.gender) {
                     return Array(hours * 60 + 1).fill(0);
                 }
 
-                const projection = [];
                 const currentTime = new Date();
-                const intervalMinutes = 1;
+                const projectionEnd = new Date(currentTime.getTime() + hours * 60 * 60 * 1000);
                 const weightKg = profile.weightLbs * 0.453592;
                 const r = this.widmarkRatio[profile.gender];
 
@@ -636,51 +656,67 @@
                 const Vmax = this.vmaxByGender[profile.gender];
                 const Km = this.km;
 
-                // Generate data points every minute
-                for (let i = 0; i <= hours * 60; i += intervalMinutes) {
-                    const futureTime = new Date(currentTime.getTime() + i * 60 * 1000);
-                    let totalBAC = 0;
+                // Find the earliest drink time
+                let earliestTime = currentTime;
+                drinks.forEach(drink => {
+                    const drinkTime = new Date(drink.timestamp);
+                    if (drinkTime < earliestTime) {
+                        earliestTime = drinkTime;
+                    }
+                });
+
+                // Integrate from earliest drink to projection end
+                const totalMinutes = Math.ceil((projectionEnd - earliestTime) / (1000 * 60));
+                const minutesFromNow = Math.ceil((currentTime - earliestTime) / (1000 * 60));
+
+                let totalBAC = 0;
+                const projection = [];
+
+                for (let minute = 0; minute <= totalMinutes; minute += 1) {
+                    const currentSimTime = new Date(earliestTime.getTime() + minute * 60 * 1000);
+
+                    // Calculate absorption from ALL drinks at this minute
+                    let totalAbsorption = 0;
 
                     drinks.forEach(drink => {
                         const drinkTime = new Date(drink.timestamp);
-                        const minutesSinceDrink = (futureTime - drinkTime) / (1000 * 60);
+                        const minutesSinceDrink = (currentSimTime - drinkTime) / (1000 * 60);
 
-                        if (minutesSinceDrink < 0) return; // Future drink, skip
+                        if (minutesSinceDrink < 0) return; // Drink hasn't happened yet
 
-                        // Get beverage-specific parameters
                         const stomachFullness = drink.stomachFullness || 'empty';
                         const beverageType = drink.beverageType || 'wine';
 
-                        // Integrate absorption and elimination minute-by-minute
-                        let bac = 0;
+                        // Get absorption rate for this drink at this time
+                        const absorptionRate = this.getAbsorptionRate(minutesSinceDrink, stomachFullness, beverageType);
+                        const gramsAbsorbedThisMinute = drink.gramsAlcohol * absorptionRate;
+                        const bacIncrease = gramsAbsorbedThisMinute / (weightKg * r * 10);
 
-                        for (let t = 0; t <= minutesSinceDrink; t += 1) {
-                            // Calculate absorption rate at this minute (derivative of Weibull, units: 1/minute)
-                            const absorptionRate = this.getAbsorptionRate(t, stomachFullness, beverageType);
-
-                            // Calculate grams absorbed this minute
-                            // absorptionRate is already per minute, so multiply directly
-                            const gramsAbsorbedThisMinute = drink.gramsAlcohol * absorptionRate;
-
-                            // Convert absorbed grams to BAC increase
-                            const bacIncrease = gramsAbsorbedThisMinute / (weightKg * r * 10);
-                            bac += bacIncrease;
-
-                            // Apply Michaelis-Menten elimination for 1 minute
-                            if (bac > 0) {
-                                const eliminationRate = (Vmax * bac) / (Km + bac); // per hour
-                                const bacDecrease = eliminationRate * (1/60); // convert to per minute
-                                bac = Math.max(0, bac - bacDecrease);
-                            }
-                        }
-
-                        totalBAC += bac;
+                        totalAbsorption += bacIncrease;
                     });
 
-                    projection.push(totalBAC);
+                    // Add absorption from all drinks
+                    totalBAC += totalAbsorption;
+
+                    // Apply Michaelis-Menten elimination to TOTAL BAC (enzyme saturation depends on total concentration)
+                    if (totalBAC > 0) {
+                        const eliminationRate = (Vmax * totalBAC) / (Km + totalBAC);
+                        const bacDecrease = eliminationRate * (1/60);
+                        totalBAC = Math.max(0, totalBAC - bacDecrease);
+                    }
+
+                    // Store projection data point if this minute is >= currentTime
+                    if (minute >= minutesFromNow) {
+                        projection.push(totalBAC);
+                    }
                 }
 
-                return projection;
+                // Ensure we have exactly hours*60+1 data points
+                while (projection.length < hours * 60 + 1) {
+                    projection.push(0);
+                }
+
+                return projection.slice(0, hours * 60 + 1);
             }
 
             // Find peak BAC from projection
@@ -769,6 +805,7 @@
                     const volume = document.getElementById('volume').value;
                     const abv = document.getElementById('abv').value;
                     const beverageType = document.getElementById('beverageType').value;
+                    const stomachFullness = document.getElementById('stomachFullness').value;
 
                     if (!volume || !abv) {
                         alert('Please enter both volume and ABV');
@@ -812,7 +849,7 @@
                         }
                     }
 
-                    this.logger.addDrink(volume, abv, customTimestamp, beverageType, 'empty');
+                    this.logger.addDrink(volume, abv, customTimestamp, beverageType, stomachFullness);
 
                     // Reset custom time toggle
                     customTimeToggle.checked = false;
