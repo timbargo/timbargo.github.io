@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Alcohol Science Lab</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+            background: linear-gradient(180deg, #ffffff 0%, #f0f4f8 100%);
+            min-height: 100vh;
+            padding: 12px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: #14b8a6;
+            text-decoration: none;
+            font-weight: bold;
+            margin-bottom: 16px;
+            padding: 8px 12px;
+            border: 2px solid #14b8a6;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .back-link:hover {
+            background: #14b8a6;
+            color: white;
+        }
+
+        h1 {
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+
+        .intro {
+            font-size: 16px;
+            color: #6b7280;
+            margin-bottom: 20px;
+        }
+
+        /* Card */
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        /* Scenario Tabs */
+        .scenario-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .scenario-tab {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #14b8a6;
+            background: white;
+            color: #14b8a6;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .scenario-tab.active {
+            background: #14b8a6;
+            color: white;
+        }
+
+        /* Presets */
+        .preset-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .preset-btn {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #6b7280;
+            background: white;
+            color: #6b7280;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .preset-btn:hover {
+            border-color: #14b8a6;
+            color: #14b8a6;
+        }
+
+        /* Drink Palette */
+        .palette-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+
+        .drink-palette {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .drink-template {
+            padding: 12px;
+            background: #f3f4f6;
+            border: 2px solid #14b8a6;
+            border-radius: 6px;
+            text-align: center;
+            cursor: grab;
+            font-size: 14px;
+            font-weight: bold;
+            color: #1f2937;
+            user-select: none;
+        }
+
+        .drink-template:active {
+            cursor: grabbing;
+        }
+
+        .drink-template.dragging {
+            opacity: 0.5;
+        }
+
+        /* Timeline */
+        .timeline-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+
+        .timeline {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            margin-bottom: 20px;
+        }
+
+        .timeline-slot {
+            aspect-ratio: 1;
+            border: 2px dashed #d1d5db;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            min-height: 80px;
+        }
+
+        .timeline-slot.drag-over {
+            background: #d1fae5;
+            border-color: #14b8a6;
+        }
+
+        .timeline-slot-label {
+            position: absolute;
+            top: 4px;
+            font-size: 11px;
+            color: #6b7280;
+            font-weight: bold;
+        }
+
+        .timeline-drink {
+            padding: 6px;
+            background: #14b8a6;
+            color: white;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+            width: 90%;
+            margin-top: 20px;
+        }
+
+        .timeline-drink .remove-btn {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 18px;
+            height: 18px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 1;
+            display: none;
+        }
+
+        .timeline-drink:hover .remove-btn {
+            display: block;
+        }
+
+        /* Parameters */
+        .param-group {
+            margin-bottom: 16px;
+        }
+
+        .param-label {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .param-value {
+            color: #14b8a6;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #e5e7eb;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #14b8a6;
+            cursor: pointer;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #14b8a6;
+            cursor: pointer;
+            border: none;
+        }
+
+        .gender-toggle {
+            display: flex;
+            gap: 8px;
+        }
+
+        .gender-btn {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #6b7280;
+            background: white;
+            color: #6b7280;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .gender-btn.active {
+            border-color: #14b8a6;
+            background: #14b8a6;
+            color: white;
+        }
+
+        /* Chart */
+        .chart-container {
+            height: 300px;
+            margin-top: 12px;
+        }
+
+        .disclaimer {
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+            padding: 20px;
+            border-top: 1px solid #e5e7eb;
+            margin-top: 24px;
+        }
+
+        @media (min-width: 768px) {
+            body {
+                padding: 24px;
+            }
+
+            .card {
+                padding: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="tracker.html" class="back-link">← Back to Tracker</a>
+
+        <h1>Interactive Alcohol Science Lab</h1>
+        <p class="intro">Experimental sandbox for exploring "what-if" drinking scenarios</p>
+
+        <!-- Scenario Tabs -->
+        <div class="card">
+            <div class="scenario-tabs">
+                <button class="scenario-tab active" data-scenario="A">Scenario A</button>
+                <button class="scenario-tab" data-scenario="B">Scenario B</button>
+                <button class="scenario-tab" data-scenario="C">Scenario C</button>
+            </div>
+
+            <div class="preset-row">
+                <button class="preset-btn" data-preset="3beers">3 Beers over 3 Hours</button>
+                <button class="preset-btn" data-preset="wine">2 Glasses Wine with Dinner</button>
+                <button class="preset-btn" data-preset="shots">4 Shots Rapid (⚠️)</button>
+                <button class="preset-btn" data-preset="clear">Clear Scenario</button>
+            </div>
+
+            <!-- Drink Palette -->
+            <div class="palette-title">Drag Drinks to Timeline (or tap on mobile)</div>
+            <div class="drink-palette">
+                <div class="drink-template" draggable="true" data-type="beer">
+                    🍺 Beer<br><small>12oz, 5%</small>
+                </div>
+                <div class="drink-template" draggable="true" data-type="wine">
+                    🍷 Wine<br><small>5oz, 12%</small>
+                </div>
+                <div class="drink-template" draggable="true" data-type="seltzer">
+                    💧 Seltzer<br><small>12oz, 5%</small>
+                </div>
+                <div class="drink-template" draggable="true" data-type="shot">
+                    🥃 Shot<br><small>1.5oz, 40%</small>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="timeline-title">8-Hour Timeline</div>
+            <div class="timeline" id="timeline">
+                <!-- Slots will be generated by JavaScript -->
+            </div>
+
+            <!-- Parameters -->
+            <div class="param-group">
+                <div class="param-label">
+                    <span>Body Weight</span>
+                    <span class="param-value" id="weightDisplay">180 lbs</span>
+                </div>
+                <input type="range" class="slider" id="weightSlider" min="50" max="300" value="180" step="5">
+            </div>
+
+            <div class="param-group">
+                <div class="param-label">
+                    <span>Gender</span>
+                </div>
+                <div class="gender-toggle">
+                    <button class="gender-btn active" id="maleBtn" data-gender="male">Male</button>
+                    <button class="gender-btn" id="femaleBtn" data-gender="female">Female</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparison Chart -->
+        <div class="card">
+            <h2 style="font-size: 1.5rem; color: #1f2937; margin-bottom: 16px;">BAC Comparison Chart</h2>
+            <div class="chart-container">
+                <canvas id="comparisonChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Related Apps -->
+        <div class="card">
+            <h2 style="font-size: 1.2rem; color: #1f2937; margin-bottom: 12px;">Explore More Tools</h2>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+                <a href="tracker.html" style="text-decoration: none;">
+                    <div style="padding: 16px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); border-radius: 6px; color: white; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <div style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">📊 BAC Tracker</div>
+                        <div style="font-size: 14px; opacity: 0.9;">Track your drinks and monitor your Blood Alcohol Content in real-time</div>
+                    </div>
+                </a>
+                <a href="impairment.html" style="text-decoration: none;">
+                    <div style="padding: 16px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border-radius: 6px; color: white; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <div style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">🧠 Impairment Effects Timeline</div>
+                        <div style="font-size: 14px; opacity: 0.9;">See how your current BAC affects cognitive, motor, visual, and legal safety</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div class="disclaimer">
+            <p>This is an experimental tool for educational exploration only.</p>
+            <p>BAC calculations are estimates. Never drink and drive. Always drink responsibly.</p>
+        </div>
+    </div>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <!-- Shared BAC Calculator Module -->
+    <script src="bac-calculator.js"></script>
+
+    <script>
+        // Use BACCalculator from shared bac-calculator.js module
+        // The class is automatically available via window.BACCalculator
+
+        // Scenario Class - Data model for a single scenario
+        class Scenario {
+            constructor(name) {
+                this.name = name;
+                this.drinks = new Array(8).fill(null); // 8 hour slots
+                this.profile = {
+                    weightLbs: 180,
+                    gender: 'male'
+                };
+            }
+
+            addDrink(hour, drinkType) {
+                const drinkData = {
+                    beer: { volumeOz: 12, abv: 5, beverageType: 'beer', label: '🍺 Beer' },
+                    wine: { volumeOz: 5, abv: 12, beverageType: 'wine', label: '🍷 Wine' },
+                    seltzer: { volumeOz: 12, abv: 5, beverageType: 'seltzer', label: '💧 Seltzer' },
+                    shot: { volumeOz: 1.5, abv: 40, beverageType: 'spirits', label: '🥃 Shot' }
+                };
+
+                const drink = drinkData[drinkType];
+                if (!drink) return;
+
+                // Use shared constant for alcohol calculation
+                const C = window.BAC_CONSTANTS || { OZ_TO_ML: 29.5735, ALCOHOL_DENSITY_G_PER_ML: 0.789 };
+                const gramsAlcohol = drink.volumeOz * (drink.abv / 100) * C.OZ_TO_ML * C.ALCOHOL_DENSITY_G_PER_ML;
+
+                this.drinks[hour] = {
+                    type: drinkType,
+                    label: drink.label,
+                    volumeOz: drink.volumeOz,
+                    abv: drink.abv,
+                    beverageType: drink.beverageType,
+                    gramsAlcohol: gramsAlcohol,
+                    timestamp: new Date(Date.now() - (7 - hour) * 60 * 60 * 1000).toISOString(),
+                    stomachFullness: 'empty'
+                };
+            }
+
+            removeDrink(hour) {
+                this.drinks[hour] = null;
+            }
+
+            clearAllDrinks() {
+                this.drinks = new Array(8).fill(null);
+            }
+
+            getDrinksForCalculation() {
+                return this.drinks.filter(d => d !== null);
+            }
+
+            setProfile(weightLbs, gender) {
+                this.profile.weightLbs = weightLbs;
+                this.profile.gender = gender;
+            }
+
+            clone() {
+                const cloned = new Scenario(this.name);
+                cloned.drinks = [...this.drinks];
+                cloned.profile = { ...this.profile };
+                return cloned;
+            }
+        }
+
+        // Main Application Controller
+        class ScienceLab {
+            constructor() {
+                this.calculator = new BACCalculator();
+                this.scenarios = {
+                    A: new Scenario('A'),
+                    B: new Scenario('B'),
+                    C: new Scenario('C')
+                };
+                this.activeScenario = 'A';
+                this.chart = null;
+                this.selectedDrinkType = null; // For mobile tap-to-place
+
+                this.init();
+            }
+
+            init() {
+                this.initTimeline();
+                this.setupEventListeners();
+                this.initChart();
+                this.updateDisplay();
+            }
+
+            initTimeline() {
+                const timeline = document.getElementById('timeline');
+                for (let hour = 0; hour < 8; hour++) {
+                    const slot = document.createElement('div');
+                    slot.className = 'timeline-slot';
+                    slot.dataset.hour = hour;
+                    slot.innerHTML = `<div class="timeline-slot-label">${hour}hr</div>`;
+
+                    // Drag and drop events
+                    slot.addEventListener('dragover', (e) => this.handleDragOver(e));
+                    slot.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+                    slot.addEventListener('drop', (e) => this.handleDrop(e));
+
+                    // Click for mobile (tap-to-place)
+                    slot.addEventListener('click', (e) => this.handleSlotClick(e));
+
+                    timeline.appendChild(slot);
+                }
+            }
+
+            setupEventListeners() {
+                // Scenario tabs
+                document.querySelectorAll('.scenario-tab').forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        this.switchScenario(tab.dataset.scenario);
+                    });
+                });
+
+                // Preset buttons
+                document.querySelectorAll('.preset-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        this.loadPreset(btn.dataset.preset);
+                    });
+                });
+
+                // Drink palette (drag start)
+                document.querySelectorAll('.drink-template').forEach(template => {
+                    template.addEventListener('dragstart', (e) => this.handleDragStart(e));
+                    template.addEventListener('dragend', (e) => this.handleDragEnd(e));
+
+                    // Click for mobile (select drink type)
+                    template.addEventListener('click', (e) => this.handleDrinkTemplateClick(e));
+                });
+
+                // Weight slider
+                document.getElementById('weightSlider').addEventListener('input', (e) => {
+                    const weight = parseInt(e.target.value);
+                    document.getElementById('weightDisplay').textContent = weight + ' lbs';
+                    this.scenarios[this.activeScenario].setProfile(weight, this.scenarios[this.activeScenario].profile.gender);
+                    this.updateChart();
+                });
+
+                // Gender buttons
+                document.getElementById('maleBtn').addEventListener('click', () => {
+                    this.setGender('male');
+                });
+                document.getElementById('femaleBtn').addEventListener('click', () => {
+                    this.setGender('female');
+                });
+            }
+
+            switchScenario(scenarioName) {
+                this.activeScenario = scenarioName;
+
+                // Update tab styles
+                document.querySelectorAll('.scenario-tab').forEach(tab => {
+                    tab.classList.toggle('active', tab.dataset.scenario === scenarioName);
+                });
+
+                // Update display
+                this.updateDisplay();
+            }
+
+            updateDisplay() {
+                const scenario = this.scenarios[this.activeScenario];
+
+                // Update timeline
+                const slots = document.querySelectorAll('.timeline-slot');
+                slots.forEach((slot, hour) => {
+                    // Remove existing drink if any
+                    const existingDrink = slot.querySelector('.timeline-drink');
+                    if (existingDrink) existingDrink.remove();
+
+                    // Add drink if present
+                    if (scenario.drinks[hour]) {
+                        const drinkEl = document.createElement('div');
+                        drinkEl.className = 'timeline-drink';
+                        drinkEl.textContent = scenario.drinks[hour].label;
+
+                        const removeBtn = document.createElement('button');
+                        removeBtn.className = 'remove-btn';
+                        removeBtn.textContent = '×';
+                        removeBtn.addEventListener('click', () => {
+                            scenario.removeDrink(hour);
+                            this.updateDisplay();
+                            this.updateChart();
+                        });
+
+                        drinkEl.appendChild(removeBtn);
+                        slot.appendChild(drinkEl);
+                    }
+                });
+
+                // Update parameters
+                document.getElementById('weightSlider').value = scenario.profile.weightLbs;
+                document.getElementById('weightDisplay').textContent = scenario.profile.weightLbs + ' lbs';
+
+                document.getElementById('maleBtn').classList.toggle('active', scenario.profile.gender === 'male');
+                document.getElementById('femaleBtn').classList.toggle('active', scenario.profile.gender === 'female');
+
+                // Update chart
+                this.updateChart();
+            }
+
+            setGender(gender) {
+                this.scenarios[this.activeScenario].setProfile(this.scenarios[this.activeScenario].profile.weightLbs, gender);
+                this.updateDisplay();
+            }
+
+            handleDragStart(e) {
+                e.dataTransfer.effectAllowed = 'copy';
+                e.dataTransfer.setData('drinkType', e.target.dataset.type);
+                e.target.classList.add('dragging');
+            }
+
+            handleDragEnd(e) {
+                e.target.classList.remove('dragging');
+            }
+
+            handleDragOver(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+                e.currentTarget.classList.add('drag-over');
+            }
+
+            handleDragLeave(e) {
+                e.currentTarget.classList.remove('drag-over');
+            }
+
+            handleDrop(e) {
+                e.preventDefault();
+                e.currentTarget.classList.remove('drag-over');
+
+                const drinkType = e.dataTransfer.getData('drinkType');
+                const hour = parseInt(e.currentTarget.dataset.hour);
+
+                this.scenarios[this.activeScenario].addDrink(hour, drinkType);
+                this.updateDisplay();
+            }
+
+            handleDrinkTemplateClick(e) {
+                // Mobile: select drink type for tap-to-place
+                this.selectedDrinkType = e.currentTarget.dataset.type;
+
+                // Visual feedback
+                document.querySelectorAll('.drink-template').forEach(t => {
+                    t.style.background = t === e.currentTarget ? '#d1fae5' : '#f3f4f6';
+                });
+            }
+
+            handleSlotClick(e) {
+                // Mobile: place selected drink
+                if (!this.selectedDrinkType) return;
+
+                const hour = parseInt(e.currentTarget.dataset.hour);
+                this.scenarios[this.activeScenario].addDrink(hour, this.selectedDrinkType);
+                this.updateDisplay();
+            }
+
+            loadPreset(presetName) {
+                const scenario = this.scenarios[this.activeScenario];
+                scenario.clearAllDrinks();
+
+                if (presetName === 'clear') {
+                    this.updateDisplay();
+                    return;
+                }
+
+                if (presetName === '3beers') {
+                    scenario.addDrink(0, 'beer');
+                    scenario.addDrink(1, 'beer');
+                    scenario.addDrink(3, 'beer');
+                } else if (presetName === 'wine') {
+                    scenario.addDrink(1, 'wine');
+                    scenario.addDrink(2, 'wine');
+                } else if (presetName === 'shots') {
+                    scenario.addDrink(0, 'shot');
+                    scenario.addDrink(0, 'shot');
+                    scenario.addDrink(1, 'shot');
+                    scenario.addDrink(1, 'shot');
+                }
+
+                this.updateDisplay();
+            }
+
+            initChart() {
+                const ctx = document.getElementById('comparisonChart').getContext('2d');
+
+                this.chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            {
+                                label: 'Scenario A',
+                                data: [],
+                                borderColor: '#14b8a6',
+                                backgroundColor: 'rgba(20, 184, 166, 0.1)',
+                                tension: 0.4,
+                                fill: false,
+                                borderWidth: 3
+                            },
+                            {
+                                label: 'Scenario B',
+                                data: [],
+                                borderColor: '#f59e0b',
+                                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                                tension: 0.4,
+                                fill: false,
+                                borderWidth: 3
+                            },
+                            {
+                                label: 'Scenario C',
+                                data: [],
+                                borderColor: '#ef4444',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                tension: 0.4,
+                                fill: false,
+                                borderWidth: 3
+                            },
+                            {
+                                label: 'Legal Limit (0.08%)',
+                                data: [{x: 0, y: 0.08}, {x: 8, y: 0.08}],
+                                borderColor: '#6b7280',
+                                backgroundColor: 'transparent',
+                                tension: 0,
+                                fill: false,
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                pointRadius: 0
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toFixed(3) + '%';
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'BAC %'
+                                }
+                            },
+                            x: {
+                                type: 'linear',
+                                min: 0,
+                                max: 8,
+                                ticks: {
+                                    stepSize: 1,
+                                    callback: function(value) {
+                                        return value + 'hr';
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Hours from Start'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            }
+                        }
+                    }
+                });
+            }
+
+            updateChart() {
+                if (!this.chart) return;
+
+                ['A', 'B', 'C'].forEach((scenarioName, index) => {
+                    const scenario = this.scenarios[scenarioName];
+                    const drinks = scenario.getDrinksForCalculation();
+
+                    if (drinks.length === 0) {
+                        this.chart.data.datasets[index].data = [];
+                    } else {
+                        const projection = this.calculator.projectBAC(drinks, scenario.profile, 8);
+                        const data = projection.map((bac, minute) => ({
+                            x: minute / 60,
+                            y: bac
+                        }));
+                        this.chart.data.datasets[index].data = data;
+                    }
+                });
+
+                // Calculate dynamic Y-axis max
+                const allData = this.chart.data.datasets.slice(0, 3).flatMap(d => d.data.map(p => p.y));
+                const maxBAC = Math.max(...allData, 0);
+                const yAxisMax = maxBAC === 0 ? 0.12 : Math.ceil((maxBAC * 1.20) * 100) / 100;
+                this.chart.options.scales.y.max = Math.max(yAxisMax, 0.12);
+
+                this.chart.update('active');
+            }
+        }
+
+        // Initialize the application
+        const lab = new ScienceLab();
+    </script>
+</body>
+</html>

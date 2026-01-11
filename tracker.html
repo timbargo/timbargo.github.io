@@ -394,6 +394,88 @@
             <button class="secondary" id="clearAllDrinks" style="width: 100%; margin-top: 12px;">Clear All Drinks</button>
         </div>
 
+        <!-- Hydration & Recovery -->
+        <div class="card">
+            <button class="settings-toggle" id="hydrationToggle" aria-expanded="false" aria-controls="hydrationContent">
+                <span>💧 Hydration & Recovery</span>
+                <span id="hydrationArrow" aria-hidden="true">▼</span>
+            </button>
+            <div class="settings-content" id="hydrationContent" role="region" aria-labelledby="hydrationToggle">
+                <!-- Hydration Status Progress Bar -->
+                <div style="margin-bottom: 16px;">
+                    <div style="font-size: 14px; font-weight: bold; color: #4b5563; margin-bottom: 8px;">Hydration Status</div>
+                    <div style="width: 100%; height: 32px; background: #e5e7eb; border-radius: 16px; overflow: hidden;">
+                        <div id="hydrationProgress" style="height: 100%; background: linear-gradient(90deg, #14b8a6 0%, #0d9488 100%); transition: width 0.5s ease; border-radius: 16px; width: 0%;"></div>
+                    </div>
+                    <div style="text-align: center; font-size: 14px; color: #6b7280; margin-top: 4px;">
+                        <span id="currentHydration">0ml</span> / <span id="targetHydration">0ml</span>
+                        (<span id="hydrationPercent">0%</span>)
+                    </div>
+                </div>
+
+                <!-- Hangover Severity Gauge -->
+                <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 12px; text-align: center;">
+                    <div style="font-size: 14px; color: #6b7280; margin-bottom: 8px;">Predicted Hangover Severity</div>
+                    <div id="hangoverScore" style="font-size: 3rem; font-weight: bold; color: #14b8a6; line-height: 1;">0.0</div>
+                    <div id="hangoverText" style="font-size: 14px; color: #6b7280; margin-top: 4px;">None</div>
+                </div>
+
+                <!-- Electrolyte Deficit -->
+                <div style="background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                    <div style="font-size: 14px; font-weight: bold; color: #4b5563; margin-bottom: 8px;">Electrolyte Deficit</div>
+                    <div style="display: flex; justify-content: space-around;">
+                        <span style="font-size: 14px; color: #4b5563;">Sodium: <strong id="sodiumDeficit" style="color: #14b8a6; font-size: 16px;">0mg</strong></span>
+                        <span style="font-size: 14px; color: #4b5563;">Potassium: <strong id="potassiumDeficit" style="color: #14b8a6; font-size: 16px;">0mg</strong></span>
+                    </div>
+                </div>
+
+                <!-- Log Water Intake -->
+                <div class="form-group">
+                    <label for="waterVolume">Log Water Intake</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="number" id="waterVolume" inputmode="decimal" min="50" max="2000" step="50" placeholder="e.g., 500" style="flex: 1;">
+                        <select id="waterUnit" style="flex: 0 0 80px;">
+                            <option value="ml">ml</option>
+                            <option value="oz">oz</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="primary" id="logWater">Log Water</button>
+
+                <!-- Recommendations -->
+                <div id="rehydrationRecommendations" style="background: #d1fae5; border-left: 4px solid #10b981; padding: 12px; border-radius: 4px; margin-top: 12px; display: none;">
+                    <div style="font-size: 14px; color: #065f46;"></div>
+                </div>
+
+                <!-- Fluid Balance Chart -->
+                <div style="margin-top: 24px;">
+                    <h3 style="font-size: 18px; color: #1f2937; margin-bottom: 12px;">12-Hour Fluid Balance</h3>
+                    <div style="height: 240px;">
+                        <canvas id="hydrationChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Related Apps -->
+        <div class="card">
+            <div class="card-header">Explore More</div>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+                <a href="impairment.html" style="text-decoration: none;">
+                    <div style="padding: 16px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); border-radius: 6px; color: white; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <div style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">🧠 Impairment Effects Timeline</div>
+                        <div style="font-size: 14px; opacity: 0.9;">See how your current BAC affects cognitive, motor, visual, and legal safety</div>
+                    </div>
+                </a>
+                <a href="science-lab.html" style="text-decoration: none;">
+                    <div style="padding: 16px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 6px; color: white; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <div style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">🔬 Interactive Science Lab</div>
+                        <div style="font-size: 14px; opacity: 0.9;">Experiment with "what-if" scenarios and compare different drinking patterns</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
         <!-- Disclaimer -->
         <div class="disclaimer">
             This BAC estimate is for informational purposes only. Actual BAC varies significantly by individual. Never drink and drive.
@@ -402,12 +484,17 @@
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <!-- Shared BAC Calculator Module -->
+    <script src="bac-calculator.js"></script>
 
     <script>
+        // LocalStorage key namespace to prevent collisions with other apps on same domain
+        const STORAGE_NAMESPACE = 'com.timbargo.bac_tracker';
+
         // UserProfile Class - Manages user data in localStorage
         class UserProfile {
             constructor() {
-                this.storageKey = 'bac_tracker_profile';
+                this.storageKey = `${STORAGE_NAMESPACE}.profile`;
             }
 
             saveProfile(weightLbs, gender) {
@@ -434,7 +521,7 @@
         // DrinkLogger Class - Manages drink entries in localStorage
         class DrinkLogger {
             constructor() {
-                this.storageKey = 'bac_tracker_drinks';
+                this.storageKey = `${STORAGE_NAMESPACE}.drinks`;
                 this.cleanupOldDrinks();
             }
 
@@ -498,7 +585,7 @@
 
                 // Michaelis-Menten parameters for elimination
                 this.vmaxByGender = {
-                    male: 0.017,    // g/dL/hr - males metabolize ~25% faster
+                    male: 0.017,    // g/dL/hr - males metabolize ~30% faster
                     female: 0.013   // g/dL/hr - females have less ADH enzyme
                 };
                 this.km = 0.015; // g/dL - Michaelis constant (enzyme saturation point)
@@ -509,9 +596,9 @@
             getAbsorptionFactor(minutesSinceDrink, stomachFullness = 'empty', beverageType = 'wine') {
                 // Lag times based on stomach fullness (gastric emptying delay)
                 const lagByFullness = {
-                    empty: 5,      // 5 min - empty stomach
-                    moderate: 10,  // 10 min - some food
-                    full: 20       // 20 min - full meal
+                    empty: 12,     // 12 min - empty stomach
+                    moderate: 35,  // 35 min - some food/snacks
+                    full: 75       // 75 min - full meal (1.25 hours)
                 };
 
                 // Scale parameter (λ) varies by beverage type
@@ -543,9 +630,9 @@
             // Returns rate of absorption per minute at time t
             getAbsorptionRate(minutesSinceDrink, stomachFullness = 'empty', beverageType = 'wine') {
                 const lagByFullness = {
-                    empty: 5,
-                    moderate: 10,
-                    full: 20
+                    empty: 12,
+                    moderate: 35,
+                    full: 75
                 };
 
                 const lambdaByBeverage = {
@@ -726,14 +813,153 @@
             }
         }
 
+        // HydrationCalculator Class - Models diuretic effects and hydration
+        // Uses constants from shared bac-calculator.js module
+        class HydrationCalculatorLocal {
+            constructor() {
+                const C = window.BAC_CONSTANTS || {
+                    FLUID_LOSS_RATIO: 1.15,
+                    ELECTROLYTE_LOSS_RATE: { sodium: 0.8, potassium: 0.6 },
+                    ATOMIC_WEIGHT_SODIUM: 23,
+                    ATOMIC_WEIGHT_POTASSIUM: 39,
+                    HANGOVER: {
+                        ALCOHOL_FACTOR_DIVISOR: 10,
+                        DEHYDRATION_FACTOR_DIVISOR: 125,
+                        CONSUMPTION_RATE_THRESHOLD: 2,
+                        RAPID_CONSUMPTION_PENALTY: 1.5,
+                        MAX_ALCOHOL_POINTS: 4,
+                        MAX_DEHYDRATION_POINTS: 4,
+                        MAX_RATE_POINTS: 2,
+                        MAX_SEVERITY: 10
+                    }
+                };
+                this.constants = C;
+                this.fluidLossRatio = C.FLUID_LOSS_RATIO;
+                this.electrolyteLossRate = C.ELECTROLYTE_LOSS_RATE;
+            }
+
+            calculateFluidLoss(drinks) {
+                let totalFluidLoss = 0;
+                drinks.forEach(drink => {
+                    const alcoholGrams = drink.gramsAlcohol;
+                    const fluidLossMl = alcoholGrams * this.fluidLossRatio;
+                    totalFluidLoss += fluidLossMl;
+                });
+                return totalFluidLoss;
+            }
+
+            calculateElectrolyteLoss(drinks) {
+                const totalDrinks = drinks.length;
+                const C = this.constants;
+                return {
+                    // Convert mmol to mg using atomic weights
+                    sodium: totalDrinks * this.electrolyteLossRate.sodium * C.ATOMIC_WEIGHT_SODIUM,
+                    potassium: totalDrinks * this.electrolyteLossRate.potassium * C.ATOMIC_WEIGHT_POTASSIUM
+                };
+            }
+
+            calculateHangoverSeverity(drinks, waterIntake, profile) {
+                if (!profile || !profile.weightLbs || !profile.gender) return 0;
+                if (drinks.length === 0) return 0;
+
+                const H = this.constants.HANGOVER;
+
+                // Factor 1: Total alcohol consumed (0-4 points)
+                const totalAlcohol = drinks.reduce((sum, d) => sum + d.gramsAlcohol, 0);
+                const alcoholPoints = Math.min(H.MAX_ALCOHOL_POINTS, totalAlcohol / H.ALCOHOL_FACTOR_DIVISOR);
+
+                // Factor 2: Dehydration (0-4 points)
+                const fluidLoss = this.calculateFluidLoss(drinks);
+                const fluidDeficit = Math.max(0, fluidLoss - waterIntake);
+                const dehydrationPoints = Math.min(H.MAX_DEHYDRATION_POINTS, fluidDeficit / H.DEHYDRATION_FACTOR_DIVISOR);
+
+                // Factor 3: Consumption rate (0-2 points)
+                // Rapid drinking causes worse hangovers due to acetaldehyde buildup
+                let ratePoints = 0;
+                if (drinks.length >= 2) {
+                    const timestamps = drinks.map(d => new Date(d.timestamp).getTime()).sort((a, b) => a - b);
+                    const drinkingDurationHours = (timestamps[timestamps.length - 1] - timestamps[0]) / (1000 * 60 * 60);
+                    if (drinkingDurationHours > 0) {
+                        const drinksPerHour = drinks.length / drinkingDurationHours;
+                        if (drinksPerHour >= H.CONSUMPTION_RATE_THRESHOLD) {
+                            ratePoints = Math.min(H.MAX_RATE_POINTS, (drinksPerHour - H.CONSUMPTION_RATE_THRESHOLD) * H.RAPID_CONSUMPTION_PENALTY);
+                        }
+                    }
+                }
+
+                // Calculate total severity
+                const severity = alcoholPoints + dehydrationPoints + ratePoints;
+                return Math.min(H.MAX_SEVERITY, Math.round(severity * 10) / 10);
+            }
+
+            getRehydrationRecommendations(fluidDeficit, electrolytes) {
+                if (fluidDeficit <= 0 && electrolytes.sodium < 100 && electrolytes.potassium < 100) {
+                    return '✓ Fully hydrated! No action needed.';
+                }
+
+                let recommendations = [];
+                if (fluidDeficit > 0) {
+                    const hours = Math.ceil(fluidDeficit / 500);
+                    recommendations.push(`• Drink ${Math.round(fluidDeficit)}ml water over next ${hours} hour${hours > 1 ? 's' : ''}`);
+                }
+                if (electrolytes.sodium > 200 || electrolytes.potassium > 300) {
+                    recommendations.push(`• Consider sports drink or coconut water for electrolytes`);
+                }
+                return recommendations.join('<br>');
+            }
+        }
+
+        // WaterIntakeLogger Class - Manages water intake in localStorage
+        class WaterIntakeLogger {
+            constructor() {
+                this.storageKey = `${STORAGE_NAMESPACE}.water_intake`;
+                this.cleanupOldIntakes();
+            }
+
+            logWaterIntake(volumeMl, timestamp = null) {
+                const intake = {
+                    id: Date.now(),
+                    volumeMl: parseFloat(volumeMl),
+                    timestamp: timestamp || new Date().toISOString()
+                };
+
+                const intakes = this.getIntakes();
+                intakes.push(intake);
+                localStorage.setItem(this.storageKey, JSON.stringify(intakes));
+                return intake;
+            }
+
+            getIntakes() {
+                const data = localStorage.getItem(this.storageKey);
+                return data ? JSON.parse(data) : [];
+            }
+
+            getTotalIntake() {
+                const intakes = this.getIntakes();
+                return intakes.reduce((sum, intake) => sum + intake.volumeMl, 0);
+            }
+
+            cleanupOldIntakes() {
+                let intakes = this.getIntakes();
+                const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
+                intakes = intakes.filter(intake =>
+                    new Date(intake.timestamp).getTime() > twentyFourHoursAgo
+                );
+                localStorage.setItem(this.storageKey, JSON.stringify(intakes));
+            }
+        }
+
         // BACTracker Class - Main controller
         class BACTracker {
             constructor() {
                 this.profile = new UserProfile();
                 this.logger = new DrinkLogger();
                 this.calculator = new BACCalculator();
+                this.hydrationCalc = new HydrationCalculatorLocal();
+                this.waterLogger = new WaterIntakeLogger();
                 this.chart = null;
                 this.isMouseDown = false;
+                this.scrubX = null;
 
                 this.init();
             }
@@ -743,10 +969,13 @@
                 this.loadProfile();
                 this.updateDisplay();
                 this.initChart();
+                this.initHydrationChart();
+                this.updateHydrationDisplay();
 
                 // Auto-refresh every 60 seconds
                 setInterval(() => {
                     this.updateDisplay();
+                    this.updateHydrationDisplay();
                 }, 60000);
             }
 
@@ -863,7 +1092,34 @@
                     if (confirm('Clear all drink history?')) {
                         localStorage.removeItem('bac_tracker_drinks');
                         this.updateDisplay();
+                        this.updateHydrationDisplay();
                     }
+                });
+
+                // Hydration toggle
+                document.getElementById('hydrationToggle').addEventListener('click', () => {
+                    const toggle = document.getElementById('hydrationToggle');
+                    const content = document.getElementById('hydrationContent');
+                    const arrow = document.getElementById('hydrationArrow');
+                    const isExpanded = content.classList.toggle('expanded');
+                    arrow.textContent = isExpanded ? '▲' : '▼';
+                    toggle.setAttribute('aria-expanded', isExpanded);
+                });
+
+                // Log water button
+                document.getElementById('logWater').addEventListener('click', () => {
+                    const volume = document.getElementById('waterVolume').value;
+                    const unit = document.getElementById('waterUnit').value;
+
+                    if (!volume || volume < 50 || volume > 2000) {
+                        alert('Please enter a valid volume (50-2000ml)');
+                        return;
+                    }
+
+                    const volumeMl = unit === 'oz' ? volume * 29.5735 : volume;
+                    this.waterLogger.logWaterIntake(volumeMl);
+                    document.getElementById('waterVolume').value = '';
+                    this.updateHydrationDisplay();
                 });
             }
 
@@ -918,6 +1174,7 @@
                         } else if (event.type === 'mouseup' || event.type === 'mouseout') {
                             tracker.isMouseDown = false;
                             tracker.hideScrub();
+                            chart.update('none');
                             return;
                         }
 
@@ -927,7 +1184,25 @@
                             if (event.x >= chartArea.left && event.x <= chartArea.right &&
                                 event.y >= chartArea.top && event.y <= chartArea.bottom) {
                                 tracker.handleScrub(chart, event.x, event.y);
+                                chart.update('none');
                             }
+                        }
+                    },
+
+                    afterDatasetsDraw(chart) {
+                        if (tracker.scrubX !== null) {
+                            const ctx = chart.ctx;
+                            const chartArea = chart.chartArea;
+
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.strokeStyle = 'rgba(20, 184, 166, 0.8)';
+                            ctx.lineWidth = 2;
+                            ctx.setLineDash([5, 5]);
+                            ctx.moveTo(tracker.scrubX, chartArea.top);
+                            ctx.lineTo(tracker.scrubX, chartArea.bottom);
+                            ctx.stroke();
+                            ctx.restore();
                         }
                     }
                 };
@@ -952,6 +1227,11 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        events: ['mousedown', 'mouseup', 'mousemove', 'mouseout'],
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
                         scales: {
                             y: {
                                 beginAtZero: true,
@@ -996,6 +1276,95 @@
                         }
                     },
                     plugins: [scrubPlugin]
+                });
+            }
+
+            initHydrationChart() {
+                const ctx = document.getElementById('hydrationChart').getContext('2d');
+
+                this.hydrationChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            {
+                                label: 'Fluid Loss (Cumulative)',
+                                data: [],
+                                borderColor: '#ef4444',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                pointRadius: 3,
+                                pointBackgroundColor: '#ef4444',
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Water Intake (Cumulative)',
+                                data: [],
+                                borderColor: '#14b8a6',
+                                backgroundColor: 'rgba(20, 184, 166, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                pointRadius: 3,
+                                pointBackgroundColor: '#14b8a6',
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Rehydration Target',
+                                data: [],
+                                borderColor: '#9ca3af',
+                                backgroundColor: 'transparent',
+                                tension: 0,
+                                fill: false,
+                                pointRadius: 0,
+                                borderWidth: 2,
+                                borderDash: [5, 5]
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + ' ml';
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Volume (ml)'
+                                }
+                            },
+                            x: {
+                                type: 'linear',
+                                min: -12,
+                                max: 0,
+                                ticks: {
+                                    stepSize: 2,
+                                    callback: function(value) {
+                                        if (value === 0) return 'Now';
+                                        return value + 'hr';
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Time (hours ago)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            }
+                        }
+                    }
                 });
             }
 
@@ -1094,6 +1463,8 @@
             }
 
             handleScrub(chart, mouseX, mouseY) {
+                this.scrubX = mouseX;
+
                 const chartArea = chart.chartArea;
                 const xPixelRange = chartArea.right - chartArea.left;
                 const relativeX = mouseX - chartArea.left;
@@ -1162,7 +1533,161 @@
             }
 
             hideScrub() {
+                this.scrubX = null;
                 document.getElementById('scrubInfo').style.display = 'none';
+            }
+
+            /**
+             * Safely get DOM element by ID, returning null if not found
+             */
+            getElement(id) {
+                const el = document.getElementById(id);
+                if (!el) {
+                    console.warn(`Element not found: ${id}`);
+                }
+                return el;
+            }
+
+            updateHydrationDisplay() {
+                const profile = this.profile.getProfile();
+                const drinks = this.logger.getDrinks();
+
+                if (!this.profile.hasProfile() || drinks.length === 0) {
+                    return; // Skip if no profile or no drinks
+                }
+
+                // Calculate hydration metrics
+                const totalIntake = this.waterLogger.getTotalIntake();
+                const fluidLoss = this.hydrationCalc.calculateFluidLoss(drinks);
+                const hydrationPercent = fluidLoss > 0 ? Math.min(100, (totalIntake / fluidLoss) * 100) : 100;
+
+                // Update progress bar (with null checks)
+                const hydrationProgress = this.getElement('hydrationProgress');
+                const currentHydration = this.getElement('currentHydration');
+                const targetHydration = this.getElement('targetHydration');
+                const hydrationPercentEl = this.getElement('hydrationPercent');
+
+                if (hydrationProgress) hydrationProgress.style.width = hydrationPercent + '%';
+                if (currentHydration) currentHydration.textContent = Math.round(totalIntake) + 'ml';
+                if (targetHydration) targetHydration.textContent = Math.round(fluidLoss) + 'ml';
+                if (hydrationPercentEl) hydrationPercentEl.textContent = Math.round(hydrationPercent) + '%';
+
+                // Calculate hangover severity
+                const severity = this.hydrationCalc.calculateHangoverSeverity(drinks, totalIntake, profile);
+                const severityEl = this.getElement('hangoverScore');
+                if (severityEl) {
+                    severityEl.textContent = severity.toFixed(1);
+                    severityEl.style.color = severity >= 7 ? '#ef4444' : severity >= 5 ? '#f59e0b' : '#14b8a6';
+                }
+
+                const severityText = ['None', 'Minimal', 'Minimal', 'Mild', 'Mild', 'Moderate',
+                    'Moderate', 'Severe', 'Severe', 'Extreme', 'Extreme'];
+                const hangoverText = this.getElement('hangoverText');
+                if (hangoverText) hangoverText.textContent = severityText[Math.round(severity)];
+
+                // Calculate electrolyte deficit
+                const electrolytes = this.hydrationCalc.calculateElectrolyteLoss(drinks);
+                const sodiumDeficit = this.getElement('sodiumDeficit');
+                const potassiumDeficit = this.getElement('potassiumDeficit');
+                if (sodiumDeficit) sodiumDeficit.textContent = Math.round(electrolytes.sodium) + 'mg';
+                if (potassiumDeficit) potassiumDeficit.textContent = Math.round(electrolytes.potassium) + 'mg';
+
+                // Update recommendations
+                const fluidDeficit = Math.max(0, fluidLoss - totalIntake);
+                const recommendations = this.hydrationCalc.getRehydrationRecommendations(fluidDeficit, electrolytes);
+                const recEl = this.getElement('rehydrationRecommendations');
+                if (recEl) {
+                    recEl.innerHTML = recommendations;
+                    recEl.style.display = 'block';
+                    recEl.style.background = fluidDeficit <= 0 ? '#d1fae5' : '#fef3c7';
+                    recEl.style.borderColor = fluidDeficit <= 0 ? '#10b981' : '#f59e0b';
+                }
+
+                // Update hydration chart
+                this.updateHydrationChart(drinks);
+            }
+
+            updateHydrationChart(drinks) {
+                if (!this.hydrationChart) return;
+
+                const now = Date.now();
+                const twelveHoursAgo = now - (12 * 60 * 60 * 1000);
+
+                // Get water intakes in the last 12 hours
+                const waterIntakes = this.waterLogger.getIntakes();
+
+                // Create timeline events (drinks and water intake)
+                const events = [];
+
+                // Add drink events (fluid loss)
+                drinks.forEach(drink => {
+                    const timestamp = new Date(drink.timestamp).getTime();
+                    if (timestamp >= twelveHoursAgo) {
+                        const hoursAgo = -(now - timestamp) / (60 * 60 * 1000);
+                        const fluidLoss = drink.gramsAlcohol * this.hydrationCalc.fluidLossRatio;
+                        events.push({
+                            time: hoursAgo,
+                            type: 'loss',
+                            value: fluidLoss,
+                            timestamp: timestamp
+                        });
+                    }
+                });
+
+                // Add water intake events
+                waterIntakes.forEach(intake => {
+                    const timestamp = new Date(intake.timestamp).getTime();
+                    if (timestamp >= twelveHoursAgo) {
+                        const hoursAgo = -(now - timestamp) / (60 * 60 * 1000);
+                        events.push({
+                            time: hoursAgo,
+                            type: 'intake',
+                            value: intake.volumeMl,
+                            timestamp: timestamp
+                        });
+                    }
+                });
+
+                // Sort events by time (oldest first)
+                events.sort((a, b) => a.time - b.time);
+
+                // Build cumulative data
+                const lossData = [{x: -12, y: 0}];
+                const intakeData = [{x: -12, y: 0}];
+                let cumulativeLoss = 0;
+                let cumulativeIntake = 0;
+
+                events.forEach(event => {
+                    if (event.type === 'loss') {
+                        cumulativeLoss += event.value;
+                        lossData.push({x: event.time, y: cumulativeLoss});
+                    } else {
+                        cumulativeIntake += event.value;
+                        intakeData.push({x: event.time, y: cumulativeIntake});
+                    }
+                });
+
+                // Add current point (now)
+                lossData.push({x: 0, y: cumulativeLoss});
+                intakeData.push({x: 0, y: cumulativeIntake});
+
+                // Create target line (total fluid loss)
+                const targetData = [
+                    {x: -12, y: cumulativeLoss},
+                    {x: 0, y: cumulativeLoss}
+                ];
+
+                // Update chart
+                this.hydrationChart.data.datasets[0].data = lossData;
+                this.hydrationChart.data.datasets[1].data = intakeData;
+                this.hydrationChart.data.datasets[2].data = targetData;
+
+                // Dynamic Y-axis max
+                const maxValue = Math.max(cumulativeLoss, cumulativeIntake, 500); // Min 500ml
+                const yAxisMax = Math.ceil(maxValue / 100) * 100; // Round up to nearest 100ml
+                this.hydrationChart.options.scales.y.max = yAxisMax;
+
+                this.hydrationChart.update('active');
             }
         }
 

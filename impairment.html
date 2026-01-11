@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BAC Impairment Effects Timeline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+            background: linear-gradient(180deg, #ffffff 0%, #f0f4f8 100%);
+            min-height: 100vh;
+            padding: 12px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: #14b8a6;
+            text-decoration: none;
+            font-weight: bold;
+            margin-bottom: 16px;
+            padding: 8px 12px;
+            border: 2px solid #14b8a6;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .back-link:hover {
+            background: #14b8a6;
+            color: white;
+        }
+
+        h1 {
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+
+        .intro {
+            font-size: 16px;
+            color: #6b7280;
+            margin-bottom: 20px;
+        }
+
+        /* BAC Scrubber Card */
+        .scrubber-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .bac-display {
+            text-align: center;
+            font-size: 4rem;
+            font-weight: bold;
+            color: #14b8a6;
+            line-height: 1;
+            margin-bottom: 12px;
+        }
+
+        .bac-label {
+            text-align: center;
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 20px;
+        }
+
+        .mode-toggle {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #14b8a6;
+            background: white;
+            color: #14b8a6;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mode-btn.active {
+            background: #14b8a6;
+            color: white;
+        }
+
+        .mode-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .slider-container {
+            margin-top: 16px;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #e5e7eb;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #14b8a6;
+            cursor: pointer;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #14b8a6;
+            cursor: pointer;
+            border: none;
+        }
+
+        /* Scene Grid */
+        .scenes-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        @media (min-width: 768px) {
+            body {
+                padding: 24px;
+            }
+
+            .scrubber-card {
+                padding: 32px;
+            }
+
+            .scenes-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .scene-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 16px;
+            position: relative;
+        }
+
+        .scene-title {
+            font-size: 1.2rem;
+            color: #1f2937;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .scene-description {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 12px;
+        }
+
+        .scene-canvas {
+            width: 100%;
+            height: 300px;
+            border-radius: 6px;
+            background: #000;
+            display: block;
+        }
+
+        .impairment-level {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background: #f9fafb;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .impairment-bar {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .impairment-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #14b8a6 0%, #f59e0b 50%, #ef4444 100%);
+            transition: width 0.5s ease;
+        }
+
+        .disclaimer {
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+            padding: 20px;
+            border-top: 1px solid #e5e7eb;
+            margin-top: 24px;
+        }
+
+        /* Mobile Tabs */
+        .mobile-tabs {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+
+        .tab-btn {
+            padding: 10px;
+            border: 2px solid #14b8a6;
+            background: white;
+            color: #14b8a6;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: #14b8a6;
+            color: white;
+        }
+
+        @media (min-width: 768px) {
+            .mobile-tabs {
+                display: none;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .scene-card {
+                display: none;
+            }
+
+            .scene-card.active-mobile {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="tracker.html" class="back-link">← Back to Tracker</a>
+
+        <h1>BAC Impairment Effects Timeline</h1>
+        <p class="intro">Real-time visualization of how Blood Alcohol Content affects your cognitive, motor, visual, and legal safety</p>
+
+        <!-- BAC Scrubber -->
+        <div class="scrubber-card">
+            <div class="bac-display" id="bacDisplay">0.000%</div>
+            <div class="bac-label" id="bacLabel">No Alcohol Detected</div>
+
+            <div class="mode-toggle">
+                <button class="mode-btn active" id="realtimeBtn">Real-Time Sync</button>
+                <button class="mode-btn" id="manualBtn">Manual Control</button>
+            </div>
+
+            <div class="slider-container" id="sliderContainer" style="display: none;">
+                <input type="range"
+                       class="slider"
+                       id="bacSlider"
+                       min="0"
+                       max="200"
+                       value="0"
+                       step="1"
+                       aria-label="BAC level slider"
+                       aria-valuemin="0"
+                       aria-valuemax="0.20"
+                       aria-valuenow="0.000">
+            </div>
+        </div>
+
+        <!-- Mobile Tabs (shown on mobile only) -->
+        <div class="mobile-tabs">
+            <button class="tab-btn active" data-scene="cognitive">Brain</button>
+            <button class="tab-btn" data-scene="motor">Body</button>
+            <button class="tab-btn" data-scene="visual">Eyes</button>
+            <button class="tab-btn" data-scene="legal">Legal</button>
+        </div>
+
+        <!-- Visualization Scenes (2x2 grid on desktop, tabbed on mobile) -->
+        <div class="scenes-grid">
+            <!-- Cognitive Scene -->
+            <div class="scene-card active-mobile" data-scene="cognitive">
+                <div class="scene-title">🧠 Cognitive Function</div>
+                <div class="scene-description">Reaction time, judgment, decision-making</div>
+                <canvas class="scene-canvas" id="cognitiveCanvas"></canvas>
+                <div class="impairment-level">
+                    <div style="font-size: 14px; color: #6b7280; margin-bottom: 4px;">Impairment Level</div>
+                    <div id="cognitiveLevel" style="font-size: 18px; font-weight: bold; color: #14b8a6;">None (0%)</div>
+                    <div class="impairment-bar">
+                        <div class="impairment-fill" id="cognitiveFill" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Motor Scene -->
+            <div class="scene-card" data-scene="motor">
+                <div class="scene-title">🏃 Motor Control</div>
+                <div class="scene-description">Balance, coordination, fine motor skills</div>
+                <canvas class="scene-canvas" id="motorCanvas"></canvas>
+                <div class="impairment-level">
+                    <div style="font-size: 14px; color: #6b7280; margin-bottom: 4px;">Impairment Level</div>
+                    <div id="motorLevel" style="font-size: 18px; font-weight: bold; color: #14b8a6;">None (0%)</div>
+                    <div class="impairment-bar">
+                        <div class="impairment-fill" id="motorFill" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual Scene -->
+            <div class="scene-card" data-scene="visual">
+                <div class="scene-title">👁️ Visual Perception</div>
+                <div class="scene-description">Field of view, peripheral vision, focus</div>
+                <canvas class="scene-canvas" id="visualCanvas"></canvas>
+                <div class="impairment-level">
+                    <div style="font-size: 14px; color: #6b7280; margin-bottom: 4px;">Impairment Level</div>
+                    <div id="visualLevel" style="font-size: 18px; font-weight: bold; color: #14b8a6;">None (0%)</div>
+                    <div class="impairment-bar">
+                        <div class="impairment-fill" id="visualFill" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Legal Scene -->
+            <div class="scene-card" data-scene="legal">
+                <div class="scene-title">⚖️ Legal & Safety</div>
+                <div class="scene-description">Driving ability, legal limits, safety thresholds</div>
+                <canvas class="scene-canvas" id="legalCanvas"></canvas>
+                <div class="impairment-level">
+                    <div style="font-size: 14px; color: #6b7280; margin-bottom: 4px;">Legal Status</div>
+                    <div id="legalLevel" style="font-size: 18px; font-weight: bold; color: #14b8a6;">Legal (Safe)</div>
+                    <div class="impairment-bar">
+                        <div class="impairment-fill" id="legalFill" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Related Apps -->
+        <div class="scrubber-card">
+            <h2 style="font-size: 1.2rem; color: #1f2937; margin-bottom: 12px;">Explore More Tools</h2>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+                <a href="tracker.html" style="text-decoration: none;">
+                    <div style="padding: 16px; background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); border-radius: 6px; color: white; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <div style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">📊 BAC Tracker</div>
+                        <div style="font-size: 14px; opacity: 0.9;">Track your drinks and monitor your Blood Alcohol Content in real-time</div>
+                    </div>
+                </a>
+                <a href="science-lab.html" style="text-decoration: none;">
+                    <div style="padding: 16px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 6px; color: white; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <div style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">🔬 Interactive Science Lab</div>
+                        <div style="font-size: 14px; opacity: 0.9;">Experiment with "what-if" scenarios and compare different drinking patterns</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div class="disclaimer">
+            <p>This visualization is for educational purposes only. Impairment varies by individual.</p>
+            <p>Never drink and drive. Always drink responsibly.</p>
+        </div>
+    </div>
+
+    <!-- THREE.js -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <!-- Shared BAC Calculator Module -->
+    <script src="bac-calculator.js"></script>
+
+    <script>
+        // LocalStorage key namespace (must match tracker.html)
+        const STORAGE_NAMESPACE = 'com.timbargo.bac_tracker';
+
+        // Placeholder for THREE.js visualizations (to be implemented)
+        // For now, we'll create simple scenes and add complexity later
+        class ImpairmentVisualizations {
+            constructor() {
+                this.scenes = {};
+                this.cameras = {};
+                this.renderers = {};
+                this.objects = {};
+            }
+
+            initCognitiveScene() {
+                const canvas = document.getElementById('cognitiveCanvas');
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x000000);
+
+                const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+                camera.position.z = 5;
+
+                const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+
+                // Simple target sphere
+                const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+                const material = new THREE.MeshBasicMaterial({ color: 0x14b8a6, wireframe: true });
+                const target = new THREE.Mesh(geometry, material);
+                scene.add(target);
+
+                this.scenes.cognitive = scene;
+                this.cameras.cognitive = camera;
+                this.renderers.cognitive = renderer;
+                this.objects.cognitive = target;
+            }
+
+            initMotorScene() {
+                const canvas = document.getElementById('motorCanvas');
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x000000);
+
+                const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+                camera.position.z = 5;
+
+                const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+
+                // Balance beam
+                const geometry = new THREE.BoxGeometry(4, 0.2, 0.2);
+                const material = new THREE.MeshBasicMaterial({ color: 0x14b8a6, wireframe: true });
+                const beam = new THREE.Mesh(geometry, material);
+                scene.add(beam);
+
+                this.scenes.motor = scene;
+                this.cameras.motor = camera;
+                this.renderers.motor = renderer;
+                this.objects.motor = beam;
+            }
+
+            initVisualScene() {
+                const canvas = document.getElementById('visualCanvas');
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x000000);
+
+                const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+                camera.position.z = 5;
+
+                const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+
+                // FOV tunnel
+                const geometry = new THREE.RingGeometry(1, 3, 32);
+                const material = new THREE.MeshBasicMaterial({ color: 0x14b8a6, wireframe: true, side: THREE.DoubleSide });
+                const ring = new THREE.Mesh(geometry, material);
+                scene.add(ring);
+
+                this.scenes.visual = scene;
+                this.cameras.visual = camera;
+                this.renderers.visual = renderer;
+                this.objects.visual = ring;
+            }
+
+            initLegalScene() {
+                const canvas = document.getElementById('legalCanvas');
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x000000);
+
+                const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+                camera.position.set(0, 10, 0);
+                camera.lookAt(0, 0, 0);
+
+                const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+
+                // Road lines
+                const geometry = new THREE.PlaneGeometry(2, 10);
+                const material = new THREE.MeshBasicMaterial({ color: 0x666666, side: THREE.DoubleSide });
+                const road = new THREE.Mesh(geometry, material);
+                road.rotation.x = -Math.PI / 2;
+                scene.add(road);
+
+                this.scenes.legal = scene;
+                this.cameras.legal = camera;
+                this.renderers.legal = renderer;
+                this.objects.legal = road;
+            }
+
+            updateVisualizations(bac, impairmentModel) {
+                // Update cognitive (jitter based on impairment)
+                if (this.objects.cognitive) {
+                    const impairment = impairmentModel.getImpairment('cognitive', bac) / 100;
+                    this.objects.cognitive.position.x = (Math.random() - 0.5) * impairment * 2;
+                    this.objects.cognitive.position.y = (Math.random() - 0.5) * impairment * 2;
+                    this.objects.cognitive.rotation.x += 0.01;
+                    this.objects.cognitive.rotation.y += 0.01;
+                }
+
+                // Update motor (wobble based on impairment)
+                if (this.objects.motor) {
+                    const impairment = impairmentModel.getImpairment('motor', bac) / 100;
+                    this.objects.motor.rotation.z = Math.sin(Date.now() / 1000) * impairment;
+                }
+
+                // Update visual (FOV shrink based on impairment)
+                if (this.objects.visual) {
+                    const impairment = impairmentModel.getImpairment('visual', bac) / 100;
+                    const fov = 75 - (impairment * 30); // Shrink from 75 to 45
+                    this.cameras.visual.fov = fov;
+                    this.cameras.visual.updateProjectionMatrix();
+                    this.objects.visual.rotation.z += 0.005;
+                }
+
+                // Update legal (road swerve based on BAC)
+                if (this.objects.legal) {
+                    // Simple visualization for now
+                    this.objects.legal.position.x = Math.sin(Date.now() / 1000) * bac * 10;
+                }
+            }
+
+            render() {
+                Object.keys(this.renderers).forEach(key => {
+                    this.renderers[key].render(this.scenes[key], this.cameras[key]);
+                });
+            }
+        }
+
+        // Main Application Controller
+        class ImpairmentApp {
+            constructor() {
+                // Use classes from shared bac-calculator.js module
+                this.calculator = new BACCalculator();
+                this.impairmentModel = new ImpairmentDataModel();
+                this.visualizations = new ImpairmentVisualizations();
+                this.currentBAC = 0;
+                this.mode = 'realtime'; // 'realtime' or 'manual'
+                this.syncInterval = null;
+                this.animationFrameId = null; // Track animation frame for cleanup
+                this.isDestroyed = false; // Flag to stop animation loop
+
+                this.init();
+            }
+
+            init() {
+                // Initialize THREE.js scenes
+                this.visualizations.initCognitiveScene();
+                this.visualizations.initMotorScene();
+                this.visualizations.initVisualScene();
+                this.visualizations.initLegalScene();
+
+                // Setup event listeners
+                this.setupEventListeners();
+
+                // Start animation loop
+                this.animate();
+
+                // Start real-time sync
+                this.startRealtimeSync();
+
+                // Cleanup on page unload to prevent memory leaks
+                window.addEventListener('beforeunload', () => this.destroy());
+                window.addEventListener('pagehide', () => this.destroy());
+            }
+
+            /**
+             * Clean up resources when page is unloaded
+             */
+            destroy() {
+                this.isDestroyed = true;
+                this.stopRealtimeSync();
+                if (this.animationFrameId) {
+                    cancelAnimationFrame(this.animationFrameId);
+                    this.animationFrameId = null;
+                }
+            }
+
+            setupEventListeners() {
+                // Mode toggle buttons
+                document.getElementById('realtimeBtn').addEventListener('click', () => {
+                    this.setMode('realtime');
+                });
+
+                document.getElementById('manualBtn').addEventListener('click', () => {
+                    this.setMode('manual');
+                });
+
+                // BAC slider
+                document.getElementById('bacSlider').addEventListener('input', (e) => {
+                    const bac = parseFloat(e.target.value) / 1000;
+                    this.setBAC(bac);
+                });
+
+                // Mobile tabs
+                const tabBtns = document.querySelectorAll('.tab-btn');
+                tabBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const scene = btn.dataset.scene;
+                        this.switchMobileTab(scene);
+                    });
+                });
+
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    this.handleResize();
+                });
+            }
+
+            setMode(mode) {
+                this.mode = mode;
+
+                // Update button styles
+                const realtimeBtn = document.getElementById('realtimeBtn');
+                const manualBtn = document.getElementById('manualBtn');
+                const sliderContainer = document.getElementById('sliderContainer');
+
+                if (mode === 'realtime') {
+                    realtimeBtn.classList.add('active');
+                    manualBtn.classList.remove('active');
+                    sliderContainer.style.display = 'none';
+                    this.startRealtimeSync();
+                } else {
+                    manualBtn.classList.add('active');
+                    realtimeBtn.classList.remove('active');
+                    sliderContainer.style.display = 'block';
+                    this.stopRealtimeSync();
+                }
+            }
+
+            startRealtimeSync() {
+                if (this.syncInterval) clearInterval(this.syncInterval);
+
+                const syncFromTracker = () => {
+                    try {
+                        // Use namespaced localStorage keys (matching tracker.html)
+                        const profile = JSON.parse(localStorage.getItem(`${STORAGE_NAMESPACE}.profile`));
+                        const drinks = JSON.parse(localStorage.getItem(`${STORAGE_NAMESPACE}.drinks`)) || [];
+
+                        if (profile && drinks.length > 0) {
+                            const bac = this.calculator.calculateCurrentBAC(drinks, profile);
+                            this.setBAC(bac);
+                        } else {
+                            this.setBAC(0);
+                        }
+                    } catch (e) {
+                        this.setBAC(0);
+                    }
+                };
+
+                syncFromTracker();
+                this.syncInterval = setInterval(syncFromTracker, 2000);
+            }
+
+            stopRealtimeSync() {
+                if (this.syncInterval) {
+                    clearInterval(this.syncInterval);
+                    this.syncInterval = null;
+                }
+            }
+
+            setBAC(bac) {
+                this.currentBAC = bac;
+
+                // Update display
+                document.getElementById('bacDisplay').textContent = bac.toFixed(3) + '%';
+
+                let label = 'No Alcohol Detected';
+                if (bac >= 0.15) label = 'Severe Impairment';
+                else if (bac >= 0.08) label = 'Legally Impaired';
+                else if (bac >= 0.05) label = 'Noticeable Impairment';
+                else if (bac >= 0.02) label = 'Mild Effects';
+
+                document.getElementById('bacLabel').textContent = label;
+
+                // Update slider if in manual mode
+                if (this.mode === 'manual') {
+                    document.getElementById('bacSlider').value = Math.round(bac * 1000);
+                }
+
+                // Update impairment levels
+                this.updateImpairmentLevels(bac);
+            }
+
+            updateImpairmentLevels(bac) {
+                // Cognitive
+                const cognitiveImpairment = this.impairmentModel.getImpairment('cognitive', bac);
+                document.getElementById('cognitiveLevel').textContent = this.getImpairmentText(cognitiveImpairment);
+                document.getElementById('cognitiveFill').style.width = cognitiveImpairment + '%';
+
+                // Motor
+                const motorImpairment = this.impairmentModel.getImpairment('motor', bac);
+                document.getElementById('motorLevel').textContent = this.getImpairmentText(motorImpairment);
+                document.getElementById('motorFill').style.width = motorImpairment + '%';
+
+                // Visual
+                const visualImpairment = this.impairmentModel.getImpairment('visual', bac);
+                document.getElementById('visualLevel').textContent = this.getImpairmentText(visualImpairment);
+                document.getElementById('visualFill').style.width = visualImpairment + '%';
+
+                // Legal
+                const legal = this.impairmentModel.getLegalStatus(bac);
+                document.getElementById('legalLevel').textContent = legal.status;
+                document.getElementById('legalLevel').style.color = legal.color;
+                document.getElementById('legalFill').style.width = legal.percent + '%';
+            }
+
+            getImpairmentText(percent) {
+                if (percent === 0) return 'None (0%)';
+                if (percent < 25) return `Minimal (${Math.round(percent)}%)`;
+                if (percent < 50) return `Mild (${Math.round(percent)}%)`;
+                if (percent < 75) return `Moderate (${Math.round(percent)}%)`;
+                return `Severe (${Math.round(percent)}%)`;
+            }
+
+            switchMobileTab(scene) {
+                // Update tab buttons
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.scene === scene);
+                });
+
+                // Update scene cards
+                document.querySelectorAll('.scene-card').forEach(card => {
+                    card.classList.toggle('active-mobile', card.dataset.scene === scene);
+                });
+            }
+
+            handleResize() {
+                Object.keys(this.visualizations.renderers).forEach(key => {
+                    const canvas = this.visualizations.renderers[key].domElement;
+                    const camera = this.visualizations.cameras[key];
+
+                    camera.aspect = canvas.clientWidth / canvas.clientHeight;
+                    camera.updateProjectionMatrix();
+                    this.visualizations.renderers[key].setSize(canvas.clientWidth, canvas.clientHeight);
+                });
+            }
+
+            animate() {
+                // Stop animation loop if destroyed
+                if (this.isDestroyed) return;
+
+                this.animationFrameId = requestAnimationFrame(() => this.animate());
+
+                // Update visualizations
+                this.visualizations.updateVisualizations(this.currentBAC, this.impairmentModel);
+
+                // Render all scenes
+                this.visualizations.render();
+            }
+        }
+
+        // Initialize the application
+        const app = new ImpairmentApp();
+    </script>
+</body>
+</html>

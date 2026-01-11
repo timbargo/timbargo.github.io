@@ -231,9 +231,9 @@
 
             getAbsorptionFactor(minutesSinceDrink, stomachFullness = 'empty', beverageType = 'wine') {
                 const lagByFullness = {
-                    empty: 5,
-                    moderate: 10,
-                    full: 20
+                    empty: 12,
+                    moderate: 35,
+                    full: 75
                 };
 
                 const lambdaByBeverage = {
@@ -259,9 +259,9 @@
 
             getAbsorptionRate(minutesSinceDrink, stomachFullness = 'empty', beverageType = 'wine') {
                 const lagByFullness = {
-                    empty: 5,
-                    moderate: 10,
-                    full: 20
+                    empty: 12,
+                    moderate: 35,
+                    full: 75
                 };
 
                 const lambdaByBeverage = {
@@ -309,10 +309,10 @@
                 name: 'Absorption is zero before lag time',
                 fn: () => {
                     const calc = new BACCalculator();
-                    const absorption = calc.getAbsorptionFactor(3, 'empty', 'wine');
+                    const absorption = calc.getAbsorptionFactor(5, 'empty', 'wine');
                     return {
                         pass: absorption === 0,
-                        message: `Absorption at 3 min (lag=5): ${absorption} (expected 0)`
+                        message: `Absorption at 5 min (lag=12): ${absorption} (expected 0)`
                     };
                 }
             },
@@ -342,10 +342,10 @@
                 name: 'Absorption rate is zero before lag',
                 fn: () => {
                     const calc = new BACCalculator();
-                    const rate = calc.getAbsorptionRate(3, 'empty', 'wine');
+                    const rate = calc.getAbsorptionRate(5, 'empty', 'wine');
                     return {
                         pass: rate === 0,
-                        message: `Rate at 3 min (lag=5): ${rate} (expected 0)`
+                        message: `Rate at 5 min (lag=12): ${rate} (expected 0)`
                     };
                 }
             },
