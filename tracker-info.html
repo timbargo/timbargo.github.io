@@ -321,6 +321,67 @@ F(t) = 1 - exp(-((t-lag)/λ)^k)    if t ≥ lag</code></pre>
             <p><strong>Together</strong>, these models provide a physiologically accurate representation of alcohol pharmacokinetics from ingestion to elimination, validated by peer-reviewed research.</p>
         </div>
 
+        <!-- Fluid Balance & Hydration -->
+        <div class="card">
+            <h2>💧 Fluid Balance & Electrolytes</h2>
+
+            <h3>Overview</h3>
+            <p>Alcohol is a potent <strong>diuretic</strong> that causes significant fluid and electrolyte loss. Understanding this helps explain why proper hydration reduces hangover severity.</p>
+
+            <h3>Alcohol's Diuretic Effect</h3>
+            <p>Alcohol inhibits <strong>vasopressin (antidiuretic hormone, ADH)</strong> release from the pituitary gland. Without ADH, your kidneys don't reabsorb water and instead excrete it as urine.</p>
+
+            <div class="highlight-box">
+                <strong>Fluid Loss Calculation:</strong>
+                <p style="margin-top: 8px;">Research shows approximately <strong>10-12ml of extra urine output per gram of alcohol consumed</strong>.</p>
+                <pre><code>Fluid Loss = Alcohol (grams) × 11.5 ml/g
+
+Example: 12oz (355ml) beer at 5% ABV
+- Alcohol: 355ml × 5% × 0.789g/ml = 14g
+- Fluid Loss: 14g × 11.5 = 161ml extra urine</code></pre>
+                <p style="margin-top: 8px;"><strong>For 7 drinks:</strong> ~98g alcohol × 11.5 = <strong>1,127ml (~1.1 liters)</strong> of extra fluid loss beyond normal urine output.</p>
+            </div>
+
+            <h3>Why This Matters</h3>
+            <ul>
+                <li><strong>Dehydration symptoms:</strong> Headache, fatigue, dizziness, dry mouth - all classic hangover symptoms are partly dehydration</li>
+                <li><strong>Blood alcohol concentration:</strong> Dehydration can actually increase BAC because there's less body water to dilute the alcohol</li>
+                <li><strong>Cognitive effects:</strong> Even mild dehydration (1-2% body weight) impairs cognitive function</li>
+            </ul>
+
+            <h3>Electrolyte Loss</h3>
+            <p>Along with water, alcohol consumption depletes electrolytes through increased urination:</p>
+
+            <div class="highlight-box">
+                <strong>Electrolyte Loss per Drink:</strong>
+                <ul style="margin-top: 8px;">
+                    <li><strong>Sodium:</strong> ~0.8 mmol/drink = ~18mg/drink
+                        <br><small>Lost through increased urine volume; sodium follows water</small>
+                    </li>
+                    <li><strong>Potassium:</strong> ~0.6 mmol/drink = ~23mg/drink
+                        <br><small>Alcohol directly increases renal potassium excretion</small>
+                    </li>
+                </ul>
+                <p style="margin-top: 12px;">While these per-drink losses are modest, they accumulate. After 7 drinks: ~129mg sodium and ~164mg potassium lost.</p>
+            </div>
+
+            <h3>Hangover Severity Model</h3>
+            <p>The predicted hangover severity (0-10 scale) considers three factors:</p>
+            <ol>
+                <li><strong>Total alcohol consumed (0-4 points):</strong> More alcohol = more acetaldehyde toxicity</li>
+                <li><strong>Dehydration level (0-4 points):</strong> Fluid deficit from diuretic effect minus water intake</li>
+                <li><strong>Consumption rate (0-2 points):</strong> Rapid drinking overwhelms liver enzyme capacity, causing acetaldehyde buildup</li>
+            </ol>
+
+            <h3>Practical Recommendations</h3>
+            <ul>
+                <li><strong>Match water to alcohol:</strong> Aim to drink ~5-6oz (150-180ml) water per standard drink</li>
+                <li><strong>Electrolyte replacement:</strong> For heavy drinking (5+ drinks), consider sports drinks or coconut water</li>
+                <li><strong>Timing matters:</strong> Drinking water throughout the evening is more effective than chugging water before bed</li>
+                <li><strong>Pre-hydrate:</strong> Starting well-hydrated helps buffer the diuretic effect</li>
+            </ul>
+        </div>
+
         <!-- References -->
         <div class="card">
             <h2>📚 Scientific References</h2>
@@ -349,6 +410,16 @@ F(t) = 1 - exp(-((t-lag)/λ)^k)    if t ≥ lag</code></pre>
             <div class="reference">
                 5. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3484320/" target="_blank">Alcohol Metabolism (PMC)</a>
                 <br><small>Comprehensive review of alcohol dehydrogenase enzyme kinetics and gender differences</small>
+            </div>
+
+            <div class="reference">
+                6. <a href="https://pubmed.ncbi.nlm.nih.gov/20497950/" target="_blank">Alcohol, vasopressin, and the kidney (PubMed)</a>
+                <br><small>Research on alcohol's inhibition of ADH and resulting diuretic effects</small>
+            </div>
+
+            <div class="reference">
+                7. <a href="https://pubmed.ncbi.nlm.nih.gov/2068596/" target="_blank">Diuretic action of alcohol in man (PubMed)</a>
+                <br><small>Clinical study quantifying urine output increase per gram of alcohol consumed</small>
             </div>
         </div>
 

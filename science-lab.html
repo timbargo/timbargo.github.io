@@ -607,7 +607,8 @@
                         const removeBtn = document.createElement('button');
                         removeBtn.className = 'remove-btn';
                         removeBtn.textContent = '×';
-                        removeBtn.addEventListener('click', () => {
+                        removeBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
                             scenario.removeDrink(hour);
                             this.updateDisplay();
                             this.updateChart();
@@ -702,9 +703,9 @@
                     scenario.addDrink(2, 'wine');
                 } else if (presetName === 'shots') {
                     scenario.addDrink(0, 'shot');
-                    scenario.addDrink(0, 'shot');
                     scenario.addDrink(1, 'shot');
-                    scenario.addDrink(1, 'shot');
+                    scenario.addDrink(2, 'shot');
+                    scenario.addDrink(3, 'shot');
                 }
 
                 this.updateDisplay();

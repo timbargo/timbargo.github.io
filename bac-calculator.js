@@ -53,7 +53,7 @@ const CONSTANTS = {
     },
 
     // Hydration constants
-    FLUID_LOSS_RATIO: 1.15,  // ~115ml fluid lost per 10g ethanol (diuretic effect)
+    FLUID_LOSS_RATIO: 11.5,  // ~115ml fluid lost per 10g ethanol (diuretic effect)
     ELECTROLYTE_LOSS_RATE: {
         sodium: 0.8,     // mmol per drink
         potassium: 0.6   // mmol per drink
