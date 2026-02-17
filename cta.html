@@ -1,0 +1,1859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CTA Tracker - Tim Bargo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Backgrounds */
+            --bg-dark: #0d0221;
+            --bg-card: #1a0533;
+            --bg-input: #2a0a4a;
+
+            /* Neon accents */
+            --neon-pink: #ff2a6d;
+            --neon-cyan: #05d9e8;
+            --neon-purple: #d300c5;
+            --neon-yellow: #f9e900;
+
+            /* Text */
+            --text-primary: #ffffff;
+            --text-secondary: #b794c0;
+            --text-muted: #7a5a8a;
+
+            /* Glow effects */
+            --glow-pink: 0 0 10px #ff2a6d, 0 0 20px #ff2a6d40;
+            --glow-cyan: 0 0 10px #05d9e8, 0 0 20px #05d9e840;
+            --glow-purple: 0 0 10px #d300c5, 0 0 20px #d300c540;
+
+            /* CTA Line Colors */
+            --cta-red: #c60c30;
+            --cta-blue: #00a1de;
+            --cta-brown: #62361b;
+            --cta-green: #009b3a;
+            --cta-orange: #f9461c;
+            --cta-purple: #522398;
+            --cta-pink: #e27ea6;
+            --cta-yellow: #f9e300;
+        }
+
+        body {
+            font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+            background: var(--bg-dark);
+            min-height: 100vh;
+            padding: 12px;
+            font-size: 16px;
+            line-height: 1.5;
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 8px 0;
+        }
+
+        .header h1 {
+            font-size: clamp(1.25rem, 5vw, 1.5rem);
+            color: var(--neon-cyan);
+            text-shadow: var(--glow-cyan);
+            letter-spacing: 2px;
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .header-btn {
+            background: transparent;
+            border: 2px solid var(--neon-pink);
+            color: var(--neon-pink);
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .header-btn:hover, .header-btn:active {
+            background: var(--neon-pink);
+            color: var(--bg-dark);
+            box-shadow: var(--glow-pink);
+        }
+
+        .header-btn.refreshing {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .last-updated {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            border: 1px solid #3a1a5a;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .card.glow-cyan {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 15px rgba(5, 217, 232, 0.2);
+        }
+
+        .card.glow-pink {
+            border-color: var(--neon-pink);
+            box-shadow: 0 0 15px rgba(255, 42, 109, 0.2);
+        }
+
+        /* Stop Card */
+        .stop-card {
+            position: relative;
+        }
+
+        .stop-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .line-indicator {
+            width: 4px;
+            min-height: 40px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .stop-info {
+            flex: 1;
+        }
+
+        .stop-line {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .stop-name {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .stop-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .stop-action-btn {
+            background: transparent;
+            border: 1px solid var(--text-muted);
+            color: var(--text-muted);
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stop-action-btn:hover {
+            border-color: var(--neon-pink);
+            color: var(--neon-pink);
+        }
+
+        .stop-action-btn.delete:hover {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+
+        /* Arrivals */
+        .arrivals-list {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            padding: 8px;
+        }
+
+        .arrival-row {
+            display: flex;
+            align-items: center;
+            padding: 8px 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .arrival-row:last-child {
+            border-bottom: none;
+        }
+
+        .arrival-time {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--neon-cyan);
+            min-width: 60px;
+            text-shadow: var(--glow-cyan);
+        }
+
+        .arrival-time.arriving {
+            color: var(--neon-pink);
+            text-shadow: var(--glow-pink);
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .arrival-location {
+            flex: 1;
+            font-size: 14px;
+            color: var(--text-secondary);
+            padding: 0 8px;
+        }
+
+        .arrival-destination {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: right;
+        }
+
+        .arrival-destination::before {
+            content: '\2192 ';
+            color: var(--neon-purple);
+        }
+
+        /* Error state */
+        .stop-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            padding: 12px;
+            color: #fca5a5;
+            font-size: 14px;
+        }
+
+        .stop-loading {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 16px;
+        }
+
+        .stop-loading::after {
+            content: '';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        /* No arrivals */
+        .no-arrivals {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 16px;
+            font-style: italic;
+        }
+
+        /* Add Stop Button */
+        .add-stop-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple));
+            border: none;
+            color: white;
+            padding: 16px;
+            font-size: 16px;
+            font-family: inherit;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            min-height: 54px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 4px 20px rgba(255, 42, 109, 0.3);
+            transition: all 0.2s;
+        }
+
+        .add-stop-btn:hover, .add-stop-btn:active {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(255, 42, 109, 0.5);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(13, 2, 33, 0.95);
+            z-index: 1000;
+            display: none;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active {
+            display: block;
+        }
+
+        .modal {
+            min-height: 100vh;
+            padding: 12px;
+            padding-bottom: 100px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 8px 0;
+        }
+
+        .modal-header h2 {
+            font-size: 1.25rem;
+            color: var(--neon-cyan);
+            text-shadow: var(--glow-cyan);
+        }
+
+        .modal-close {
+            background: transparent;
+            border: 2px solid var(--neon-pink);
+            color: var(--neon-pink);
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Form elements */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            color: var(--neon-cyan);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            font-family: inherit;
+            background: var(--bg-input);
+            border: 2px solid #3a1a5a;
+            border-radius: 6px;
+            color: var(--text-primary);
+            min-height: 50px;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 10px rgba(5, 217, 232, 0.3);
+        }
+
+        select {
+            cursor: pointer;
+        }
+
+        select option {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        /* Stop Search */
+        .search-input-wrapper {
+            position: relative;
+        }
+
+        .search-input {
+            padding-right: 44px !important;
+        }
+
+        .search-clear {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 20px;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: none;
+        }
+
+        .search-clear.visible {
+            display: block;
+        }
+
+        /* Stop List for selection */
+        .stop-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #3a1a5a;
+            border-radius: 6px;
+            margin-top: 8px;
+        }
+
+        .stop-list-item {
+            padding: 14px;
+            border-bottom: 1px solid #3a1a5a;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .stop-list-item:last-child {
+            border-bottom: none;
+        }
+
+        .stop-list-item:hover, .stop-list-item:active {
+            background: var(--bg-input);
+        }
+
+        .stop-list-item.selected {
+            background: var(--neon-purple);
+            color: white;
+        }
+
+        .stop-list-item .stop-id {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Tabs for Bus/Train */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 14px;
+            background: transparent;
+            border: 2px solid #3a1a5a;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            min-height: 50px;
+        }
+
+        .tab.active {
+            border-color: var(--neon-cyan);
+            color: var(--neon-cyan);
+            background: rgba(5, 217, 232, 0.1);
+        }
+
+        /* Primary Button */
+        .btn-primary {
+            width: 100%;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            border: none;
+            color: white;
+            padding: 16px;
+            font-size: 16px;
+            font-family: inherit;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            min-height: 54px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover:not(:disabled), .btn-primary:active:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(5, 217, 232, 0.5);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 2px solid var(--text-muted);
+            color: var(--text-secondary);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--neon-pink);
+            color: var(--neon-pink);
+        }
+
+        .btn-danger {
+            background: transparent;
+            border: 2px solid #ef4444;
+            color: #ef4444;
+        }
+
+        .btn-danger:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        /* Settings */
+        .settings-section {
+            margin-bottom: 24px;
+        }
+
+        .settings-section h3 {
+            font-size: 14px;
+            color: var(--neon-pink);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid #3a1a5a;
+            padding-bottom: 8px;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state p {
+            margin-bottom: 24px;
+        }
+
+        /* Info text */
+        .info-text {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        .info-link {
+            color: var(--neon-cyan);
+            text-decoration: none;
+        }
+
+        .info-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (min-width: 480px) {
+            body {
+                padding: 16px;
+            }
+
+            .card {
+                padding: 16px;
+            }
+
+            .arrival-time {
+                min-width: 70px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            body {
+                padding: 24px;
+            }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #3a1a5a;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--neon-purple);
+        }
+
+        /* Loading shimmer */
+        .shimmer {
+            background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-input) 50%, var(--bg-card) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>CTA TRACKER</h1>
+            <div class="header-buttons">
+                <button class="header-btn" id="settingsBtn" title="Settings">&#9881;</button>
+                <button class="header-btn" id="refreshBtn" title="Refresh">&#8635;</button>
+            </div>
+        </div>
+        <div class="last-updated" id="lastUpdated">Loading...</div>
+
+        <!-- Main Content - Stop Cards -->
+        <div id="stopsContainer">
+            <!-- Stop cards will be rendered here -->
+        </div>
+
+        <!-- Add Stop Button -->
+        <button class="add-stop-btn" id="addStopBtn">+ Add Stop</button>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="modal-close" id="closeSettingsBtn">&times;</button>
+            </div>
+
+            <div class="settings-section">
+                <h3>API Keys</h3>
+                <div class="form-group">
+                    <label for="trainApiKey">Train Tracker API Key</label>
+                    <input type="password" id="trainApiKey" placeholder="For L train arrivals">
+                    <p class="info-text">
+                        <a href="https://www.transitchicago.com/developers/traintrackerapply/" target="_blank" class="info-link">Get Train API Key &rarr;</a>
+                    </p>
+                </div>
+                <div class="form-group">
+                    <label for="busApiKey">Bus Tracker API Key</label>
+                    <input type="password" id="busApiKey" placeholder="For bus arrivals">
+                    <p class="info-text">
+                        <a href="https://www.ctabustracker.com/bustime/login.jsp" target="_blank" class="info-link">Get Bus API Key &rarr;</a>
+                    </p>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Preferences</h3>
+                <div class="form-group">
+                    <label for="refreshInterval">Auto-refresh Interval (seconds)</label>
+                    <input type="number" id="refreshInterval" min="10" max="300" value="30">
+                </div>
+                <div class="form-group">
+                    <label for="maxArrivals">Max Arrivals per Stop</label>
+                    <input type="number" id="maxArrivals" min="1" max="10" value="5">
+                </div>
+            </div>
+
+            <button class="btn-primary" id="saveSettingsBtn">Save Settings</button>
+
+            <div style="margin-top: 24px;">
+                <button class="btn-danger" id="clearAllDataBtn" style="width: 100%;">Clear All Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Stop Modal -->
+    <div class="modal-overlay" id="addStopModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Add Stop</h2>
+                <button class="modal-close" id="closeAddStopBtn">&times;</button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" data-type="train" id="trainTab">&#128646; Train</button>
+                <button class="tab" data-type="bus" id="busTab">&#128652; Bus</button>
+            </div>
+
+            <!-- Train Form -->
+            <div id="trainForm">
+                <div class="form-group">
+                    <label for="trainLine">Select Line</label>
+                    <select id="trainLine">
+                        <option value="">-- Select Line --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="trainStation">Select Station</label>
+                    <select id="trainStation" disabled>
+                        <option value="">-- Select Station --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="trainDirection">Select Platform</label>
+                    <select id="trainDirection" disabled>
+                        <option value="">-- Select Platform --</option>
+                    </select>
+                </div>
+                <button class="btn-primary" id="addTrainStopBtn" disabled>Add Train Stop</button>
+            </div>
+
+            <!-- Bus Form -->
+            <div id="busForm" style="display: none;">
+                <div class="form-group">
+                    <label for="busRoute">Route Number</label>
+                    <input type="text" id="busRoute" placeholder="e.g., 74">
+                </div>
+                <div class="form-group">
+                    <label for="busDirection">Direction</label>
+                    <select id="busDirection" disabled>
+                        <option value="">-- Enter route first --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="busStopSearch">Search Stops</label>
+                    <div class="search-input-wrapper">
+                        <input type="text" id="busStopSearch" class="search-input" placeholder="Type to search stops..." disabled>
+                        <button class="search-clear" id="busSearchClear">&times;</button>
+                    </div>
+                </div>
+                <div class="stop-list" id="busStopList" style="display: none;">
+                    <!-- Bus stops will be listed here -->
+                </div>
+                <button class="btn-primary" id="addBusStopBtn" disabled style="margin-top: 16px;">Add Bus Stop</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =====================================================================
+        // CONSTANTS & CONFIGURATION
+        // =====================================================================
+
+        const STORAGE_NAMESPACE = 'com.timbargo.cta_tracker';
+
+        // CTA Train Lines and Stations (static data)
+        const CTA_LINES = [
+            { id: 'Red', name: 'Red Line', color: '#c60c30' },
+            { id: 'Blue', name: 'Blue Line', color: '#00a1de' },
+            { id: 'Brn', name: 'Brown Line', color: '#62361b' },
+            { id: 'G', name: 'Green Line', color: '#009b3a' },
+            { id: 'Org', name: 'Orange Line', color: '#f9461c' },
+            { id: 'P', name: 'Purple Line', color: '#522398' },
+            { id: 'Pink', name: 'Pink Line', color: '#e27ea6' },
+            { id: 'Y', name: 'Yellow Line', color: '#f9e300' }
+        ];
+
+        // Station data with stop IDs per platform
+        // Format: { name, lat, lng, lines: [lineIds], stops: { [direction]: stopId } }
+        // This is a subset - in production you'd fetch from CTA or have complete list
+        const CTA_STATIONS = [
+            // Red Line (north-south)
+            { name: 'Howard', mapId: 40900, lines: ['Red', 'P', 'Y'], stops: { 'Howard-bound': 30173, '95th-bound': 30174 } },
+            { name: 'Jarvis', mapId: 41190, lines: ['Red'], stops: { 'Howard-bound': 30181, '95th-bound': 30182 } },
+            { name: 'Morse', mapId: 40100, lines: ['Red'], stops: { 'Howard-bound': 30020, '95th-bound': 30021 } },
+            { name: 'Loyola', mapId: 41300, lines: ['Red'], stops: { 'Howard-bound': 30203, '95th-bound': 30204 } },
+            { name: 'Granville', mapId: 40760, lines: ['Red'], stops: { 'Howard-bound': 30147, '95th-bound': 30148 } },
+            { name: 'Thorndale', mapId: 40880, lines: ['Red'], stops: { 'Howard-bound': 30169, '95th-bound': 30170 } },
+            { name: 'Bryn Mawr', mapId: 41380, lines: ['Red'], stops: { 'Howard-bound': 30267, '95th-bound': 30268 } },
+            { name: 'Berwyn', mapId: 40340, lines: ['Red'], stops: { 'Howard-bound': 30065, '95th-bound': 30066 } },
+            { name: 'Argyle', mapId: 41200, lines: ['Red'], stops: { 'Howard-bound': 30183, '95th-bound': 30184 } },
+            { name: 'Lawrence', mapId: 40770, lines: ['Red'], stops: { 'Howard-bound': 30149, '95th-bound': 30150 } },
+            { name: 'Wilson', mapId: 40540, lines: ['Red', 'P'], stops: { 'Howard-bound': 30105, '95th-bound': 30106, 'Linden-bound': 30105, 'Loop-bound': 30106 } },
+            { name: 'Sheridan', mapId: 40080, lines: ['Red'], stops: { 'Howard-bound': 30016, '95th-bound': 30017 } },
+            { name: 'Addison (Red)', mapId: 41420, lines: ['Red'], stops: { 'Howard-bound': 30273, '95th-bound': 30274 } },
+            { name: 'Belmont (Red/Brown/Purple)', mapId: 41320, lines: ['Red', 'Brn', 'P'], stops: { 'Howard-bound': 30256, '95th-bound': 30257, 'Kimball-bound': 30255, 'Loop-bound': 30256, 'Linden-bound': 30255 } },
+            { name: 'Fullerton', mapId: 41220, lines: ['Red', 'Brn', 'P'], stops: { 'Howard-bound': 30186, '95th-bound': 30187, 'Kimball-bound': 30185, 'Loop-bound': 30186, 'Linden-bound': 30185 } },
+            { name: 'North/Clybourn', mapId: 40650, lines: ['Red'], stops: { 'Howard-bound': 30128, '95th-bound': 30129 } },
+            { name: 'Clark/Division', mapId: 40630, lines: ['Red'], stops: { 'Howard-bound': 30122, '95th-bound': 30123 } },
+            { name: 'Chicago (Red)', mapId: 41450, lines: ['Red'], stops: { 'Howard-bound': 30279, '95th-bound': 30280 } },
+            { name: 'Grand (Red)', mapId: 40330, lines: ['Red'], stops: { 'Howard-bound': 30063, '95th-bound': 30064 } },
+            { name: 'Lake (Red)', mapId: 41660, lines: ['Red'], stops: { 'Howard-bound': 30289, '95th-bound': 30290 } },
+            { name: 'Monroe (Red)', mapId: 41090, lines: ['Red'], stops: { 'Howard-bound': 30211, '95th-bound': 30212 } },
+            { name: 'Jackson (Red)', mapId: 40560, lines: ['Red'], stops: { 'Howard-bound': 30109, '95th-bound': 30110 } },
+            { name: 'Harrison', mapId: 41490, lines: ['Red'], stops: { 'Howard-bound': 30285, '95th-bound': 30286 } },
+            { name: 'Roosevelt (Red/Orange/Green)', mapId: 41400, lines: ['Red', 'Org', 'G'], stops: { 'Howard-bound': 30269, '95th-bound': 30270, 'Midway-bound': 30080, 'Loop-bound': 30081, 'Harlem-bound': 30080, 'Ashland/63rd-bound': 30081 } },
+            { name: 'Cermak-Chinatown', mapId: 41000, lines: ['Red'], stops: { 'Howard-bound': 30193, '95th-bound': 30194 } },
+            { name: 'Sox-35th', mapId: 40190, lines: ['Red'], stops: { 'Howard-bound': 30036, '95th-bound': 30037 } },
+            { name: '47th (Red)', mapId: 41230, lines: ['Red'], stops: { 'Howard-bound': 30189, '95th-bound': 30190 } },
+            { name: 'Garfield (Red)', mapId: 41170, lines: ['Red'], stops: { 'Howard-bound': 30177, '95th-bound': 30178 } },
+            { name: '63rd', mapId: 40910, lines: ['Red'], stops: { 'Howard-bound': 30175, '95th-bound': 30176 } },
+            { name: '69th', mapId: 40990, lines: ['Red'], stops: { 'Howard-bound': 30191, '95th-bound': 30192 } },
+            { name: '79th', mapId: 40240, lines: ['Red'], stops: { 'Howard-bound': 30046, '95th-bound': 30047 } },
+            { name: '87th', mapId: 41430, lines: ['Red'], stops: { 'Howard-bound': 30275, '95th-bound': 30276 } },
+            { name: '95th/Dan Ryan', mapId: 40450, lines: ['Red'], stops: { 'Howard-bound': 30088, '95th-bound': 30089 } },
+
+            // Blue Line (O'Hare branch)
+            { name: "O'Hare", mapId: 40890, lines: ['Blue'], stops: { "O'Hare-bound": 30171, 'Forest Park-bound': 30172 } },
+            { name: 'Rosemont', mapId: 40820, lines: ['Blue'], stops: { "O'Hare-bound": 30159, 'Forest Park-bound': 30160 } },
+            { name: 'Cumberland', mapId: 40230, lines: ['Blue'], stops: { "O'Hare-bound": 30044, 'Forest Park-bound': 30045 } },
+            { name: 'Harlem (Blue-O\'Hare)', mapId: 40750, lines: ['Blue'], stops: { "O'Hare-bound": 30145, 'Forest Park-bound': 30146 } },
+            { name: 'Jefferson Park', mapId: 41280, lines: ['Blue'], stops: { "O'Hare-bound": 30247, 'Forest Park-bound': 30248 } },
+            { name: 'Montrose (Blue)', mapId: 41330, lines: ['Blue'], stops: { "O'Hare-bound": 30259, 'Forest Park-bound': 30260 } },
+            { name: 'Irving Park (Blue)', mapId: 40550, lines: ['Blue'], stops: { "O'Hare-bound": 30107, 'Forest Park-bound': 30108 } },
+            { name: 'Addison (Blue)', mapId: 41240, lines: ['Blue'], stops: { "O'Hare-bound": 30191, 'Forest Park-bound': 30192 } },
+            { name: 'Belmont (Blue)', mapId: 40060, lines: ['Blue'], stops: { "O'Hare-bound": 30012, 'Forest Park-bound': 30013 } },
+            { name: 'Logan Square', mapId: 41020, lines: ['Blue'], stops: { "O'Hare-bound": 30195, 'Forest Park-bound': 30196 } },
+            { name: 'California (Blue)', mapId: 40570, lines: ['Blue'], stops: { "O'Hare-bound": 30111, 'Forest Park-bound': 30112 } },
+            { name: 'Western (Blue-O\'Hare)', mapId: 40670, lines: ['Blue'], stops: { "O'Hare-bound": 30130, 'Forest Park-bound': 30131 } },
+            { name: 'Damen (Blue)', mapId: 40590, lines: ['Blue'], stops: { "O'Hare-bound": 30115, 'Forest Park-bound': 30116 } },
+            { name: 'Division (Blue)', mapId: 40320, lines: ['Blue'], stops: { "O'Hare-bound": 30061, 'Forest Park-bound': 30062 } },
+            { name: 'Chicago (Blue)', mapId: 41410, lines: ['Blue'], stops: { "O'Hare-bound": 30271, 'Forest Park-bound': 30272 } },
+            { name: 'Grand (Blue)', mapId: 40490, lines: ['Blue'], stops: { "O'Hare-bound": 30095, 'Forest Park-bound': 30096 } },
+            { name: 'Clark/Lake', mapId: 40380, lines: ['Blue', 'Brn', 'G', 'Org', 'P', 'Pink'], stops: { "O'Hare-bound": 30074, 'Forest Park-bound': 30075, 'Loop-bound': 30074, 'Kimball-bound': 30074, 'Harlem-bound': 30074, 'Midway-bound': 30075, 'Ashland/63rd-bound': 30075, 'Linden-bound': 30074, '54th/Cermak-bound': 30075 } },
+            { name: 'Washington (Blue)', mapId: 40370, lines: ['Blue'], stops: { "O'Hare-bound": 30072, 'Forest Park-bound': 30073 } },
+            { name: 'Monroe (Blue)', mapId: 40790, lines: ['Blue'], stops: { "O'Hare-bound": 30153, 'Forest Park-bound': 30154 } },
+            { name: 'Jackson (Blue)', mapId: 40070, lines: ['Blue'], stops: { "O'Hare-bound": 30014, 'Forest Park-bound': 30015 } },
+            { name: 'LaSalle', mapId: 41340, lines: ['Blue'], stops: { "O'Hare-bound": 30261, 'Forest Park-bound': 30262 } },
+            { name: 'Clinton (Blue)', mapId: 40430, lines: ['Blue'], stops: { "O'Hare-bound": 30084, 'Forest Park-bound': 30085 } },
+            { name: 'UIC-Halsted', mapId: 40350, lines: ['Blue'], stops: { "O'Hare-bound": 30067, 'Forest Park-bound': 30068 } },
+            { name: 'Racine (Blue)', mapId: 40470, lines: ['Blue'], stops: { "O'Hare-bound": 30091, 'Forest Park-bound': 30092 } },
+            { name: 'Illinois Medical District', mapId: 40810, lines: ['Blue'], stops: { "O'Hare-bound": 30157, 'Forest Park-bound': 30158 } },
+            { name: 'Western (Blue-Forest Park)', mapId: 40220, lines: ['Blue'], stops: { "O'Hare-bound": 30042, 'Forest Park-bound': 30043 } },
+            { name: 'Kedzie-Homan (Blue)', mapId: 40250, lines: ['Blue'], stops: { "O'Hare-bound": 30048, 'Forest Park-bound': 30049 } },
+            { name: 'Pulaski (Blue)', mapId: 40920, lines: ['Blue'], stops: { "O'Hare-bound": 30177, 'Forest Park-bound': 30178 } },
+            { name: 'Cicero (Blue)', mapId: 40970, lines: ['Blue'], stops: { "O'Hare-bound": 30187, 'Forest Park-bound': 30188 } },
+            { name: 'Austin (Blue)', mapId: 40010, lines: ['Blue'], stops: { "O'Hare-bound": 30001, 'Forest Park-bound': 30002 } },
+            { name: 'Oak Park (Blue)', mapId: 40180, lines: ['Blue'], stops: { "O'Hare-bound": 30034, 'Forest Park-bound': 30035 } },
+            { name: 'Harlem (Blue-Forest Park)', mapId: 40980, lines: ['Blue'], stops: { "O'Hare-bound": 30189, 'Forest Park-bound': 30190 } },
+            { name: 'Forest Park', mapId: 40390, lines: ['Blue'], stops: { "O'Hare-bound": 30076, 'Forest Park-bound': 30077 } },
+
+            // Brown Line
+            { name: 'Kimball', mapId: 41290, lines: ['Brn'], stops: { 'Kimball-bound': 30249, 'Loop-bound': 30250 } },
+            { name: 'Kedzie (Brown)', mapId: 41180, lines: ['Brn'], stops: { 'Kimball-bound': 30179, 'Loop-bound': 30180 } },
+            { name: 'Francisco', mapId: 40870, lines: ['Brn'], stops: { 'Kimball-bound': 30167, 'Loop-bound': 30168 } },
+            { name: 'Rockwell', mapId: 41010, lines: ['Brn'], stops: { 'Kimball-bound': 30197, 'Loop-bound': 30198 } },
+            { name: 'Western (Brown)', mapId: 41480, lines: ['Brn'], stops: { 'Kimball-bound': 30281, 'Loop-bound': 30282 } },
+            { name: 'Damen (Brown)', mapId: 40090, lines: ['Brn'], stops: { 'Kimball-bound': 30018, 'Loop-bound': 30019 } },
+            { name: 'Montrose (Brown)', mapId: 41500, lines: ['Brn'], stops: { 'Kimball-bound': 30287, 'Loop-bound': 30288 } },
+            { name: 'Irving Park (Brown)', mapId: 41460, lines: ['Brn'], stops: { 'Kimball-bound': 30277, 'Loop-bound': 30278 } },
+            { name: 'Addison (Brown)', mapId: 41440, lines: ['Brn'], stops: { 'Kimball-bound': 30275, 'Loop-bound': 30276 } },
+            { name: 'Paulina', mapId: 41310, lines: ['Brn'], stops: { 'Kimball-bound': 30253, 'Loop-bound': 30254 } },
+            { name: 'Southport', mapId: 40360, lines: ['Brn'], stops: { 'Kimball-bound': 30069, 'Loop-bound': 30070 } },
+            { name: 'Wellington', mapId: 41210, lines: ['Brn', 'P'], stops: { 'Kimball-bound': 30231, 'Loop-bound': 30232, 'Linden-bound': 30231 } },
+            { name: 'Diversey', mapId: 40530, lines: ['Brn', 'P'], stops: { 'Kimball-bound': 30103, 'Loop-bound': 30104, 'Linden-bound': 30103 } },
+            { name: 'Armitage', mapId: 40660, lines: ['Brn', 'P'], stops: { 'Kimball-bound': 30126, 'Loop-bound': 30127, 'Linden-bound': 30126 } },
+            { name: 'Sedgwick', mapId: 40800, lines: ['Brn', 'P'], stops: { 'Kimball-bound': 30155, 'Loop-bound': 30156, 'Linden-bound': 30155 } },
+            { name: 'Chicago (Brown/Purple)', mapId: 40710, lines: ['Brn', 'P'], stops: { 'Kimball-bound': 30137, 'Loop-bound': 30138, 'Linden-bound': 30137 } },
+            { name: 'Merchandise Mart', mapId: 40460, lines: ['Brn', 'P'], stops: { 'Kimball-bound': 30089, 'Loop-bound': 30090, 'Linden-bound': 30089 } },
+            { name: 'Washington/Wells', mapId: 40730, lines: ['Brn', 'Org', 'P', 'Pink'], stops: { 'Kimball-bound': 30141, 'Loop-bound': 30142, 'Linden-bound': 30141, 'Midway-bound': 30142, '54th/Cermak-bound': 30142 } },
+            { name: 'Quincy', mapId: 40040, lines: ['Brn', 'Org', 'P', 'Pink'], stops: { 'Kimball-bound': 30008, 'Loop-bound': 30009, 'Linden-bound': 30008, 'Midway-bound': 30009, '54th/Cermak-bound': 30009 } },
+            { name: 'LaSalle/Van Buren', mapId: 40160, lines: ['Brn', 'Org', 'P', 'Pink'], stops: { 'Kimball-bound': 30030, 'Loop-bound': 30031, 'Linden-bound': 30030, 'Midway-bound': 30031, '54th/Cermak-bound': 30031 } },
+            { name: 'Harold Washington Library', mapId: 40850, lines: ['Brn', 'Org', 'P', 'Pink'], stops: { 'Kimball-bound': 30163, 'Loop-bound': 30164, 'Linden-bound': 30163, 'Midway-bound': 30164, '54th/Cermak-bound': 30164 } },
+            { name: 'Adams/Wabash', mapId: 40680, lines: ['Brn', 'G', 'Org', 'P', 'Pink'], stops: { 'Kimball-bound': 30132, 'Loop-bound': 30133, 'Linden-bound': 30132, 'Midway-bound': 30133, 'Harlem-bound': 30132, 'Ashland/63rd-bound': 30133, '54th/Cermak-bound': 30133 } },
+            { name: 'State/Lake', mapId: 40260, lines: ['Brn', 'G', 'Org', 'P', 'Pink'], stops: { 'Kimball-bound': 30050, 'Loop-bound': 30051, 'Linden-bound': 30050, 'Midway-bound': 30051, 'Harlem-bound': 30050, 'Ashland/63rd-bound': 30051, '54th/Cermak-bound': 30051 } },
+            { name: 'Randolph/Wabash', mapId: 40200, lines: ['Brn', 'G', 'Org', 'P', 'Pink'], stops: { 'Kimball-bound': 30038, 'Loop-bound': 30039, 'Linden-bound': 30038, 'Midway-bound': 30039, 'Harlem-bound': 30038, 'Ashland/63rd-bound': 30039, '54th/Cermak-bound': 30039 } },
+            { name: 'Madison/Wabash', mapId: 40640, lines: ['Brn', 'G', 'Org', 'P', 'Pink'], stops: { 'Kimball-bound': 30124, 'Loop-bound': 30125, 'Linden-bound': 30124, 'Midway-bound': 30125, 'Harlem-bound': 30124, 'Ashland/63rd-bound': 30125, '54th/Cermak-bound': 30125 } },
+
+            // Green Line
+            { name: 'Harlem/Lake', mapId: 40020, lines: ['G'], stops: { 'Harlem-bound': 30003, 'Ashland/63rd-bound': 30004 } },
+            { name: 'Oak Park (Green)', mapId: 41350, lines: ['G'], stops: { 'Harlem-bound': 30263, 'Ashland/63rd-bound': 30264 } },
+            { name: 'Ridgeland', mapId: 40610, lines: ['G'], stops: { 'Harlem-bound': 30118, 'Ashland/63rd-bound': 30119 } },
+            { name: 'Austin (Green)', mapId: 41260, lines: ['G'], stops: { 'Harlem-bound': 30241, 'Ashland/63rd-bound': 30242 } },
+            { name: 'Central (Green)', mapId: 40280, lines: ['G'], stops: { 'Harlem-bound': 30054, 'Ashland/63rd-bound': 30055 } },
+            { name: 'Laramie', mapId: 40700, lines: ['G'], stops: { 'Harlem-bound': 30135, 'Ashland/63rd-bound': 30136 } },
+            { name: 'Cicero (Green)', mapId: 40480, lines: ['G'], stops: { 'Harlem-bound': 30093, 'Ashland/63rd-bound': 30094 } },
+            { name: 'Pulaski (Green)', mapId: 40030, lines: ['G'], stops: { 'Harlem-bound': 30005, 'Ashland/63rd-bound': 30006 } },
+            { name: 'Conservatory', mapId: 41670, lines: ['G'], stops: { 'Harlem-bound': 30291, 'Ashland/63rd-bound': 30292 } },
+            { name: 'Kedzie (Green)', mapId: 41070, lines: ['G'], stops: { 'Harlem-bound': 30205, 'Ashland/63rd-bound': 30206 } },
+            { name: 'California (Green)', mapId: 41360, lines: ['G'], stops: { 'Harlem-bound': 30265, 'Ashland/63rd-bound': 30266 } },
+            { name: 'Ashland (Green)', mapId: 40170, lines: ['G'], stops: { 'Harlem-bound': 30032, 'Ashland/63rd-bound': 30033 } },
+            { name: 'Morgan', mapId: 41510, lines: ['G', 'Pink'], stops: { 'Harlem-bound': 30295, 'Ashland/63rd-bound': 30296, '54th/Cermak-bound': 30296 } },
+            { name: 'Clinton (Green/Pink)', mapId: 41160, lines: ['G', 'Pink'], stops: { 'Harlem-bound': 30221, 'Ashland/63rd-bound': 30222, '54th/Cermak-bound': 30222 } },
+            { name: '35th-Bronzeville-IIT', mapId: 41120, lines: ['G'], stops: { 'Harlem-bound': 30213, 'Ashland/63rd-bound': 30214 } },
+            { name: 'Indiana', mapId: 40300, lines: ['G'], stops: { 'Harlem-bound': 30058, 'Ashland/63rd-bound': 30059 } },
+            { name: '43rd', mapId: 41270, lines: ['G'], stops: { 'Harlem-bound': 30243, 'Ashland/63rd-bound': 30244 } },
+            { name: '47th (Green)', mapId: 41080, lines: ['G'], stops: { 'Harlem-bound': 30207, 'Ashland/63rd-bound': 30208 } },
+            { name: '51st', mapId: 40130, lines: ['G'], stops: { 'Harlem-bound': 30025, 'Ashland/63rd-bound': 30026 } },
+            { name: 'Garfield (Green)', mapId: 40510, lines: ['G'], stops: { 'Harlem-bound': 30099, 'Ashland/63rd-bound': 30100 } },
+            { name: 'King Drive', mapId: 41140, lines: ['G'], stops: { 'Harlem-bound': 30217, 'Ashland/63rd-bound': 30218 } },
+            { name: 'Cottage Grove', mapId: 40720, lines: ['G'], stops: { 'Harlem-bound': 30139, 'Ashland/63rd-bound': 30140 } },
+            { name: 'Halsted (Green)', mapId: 40940, lines: ['G'], stops: { 'Harlem-bound': 30183, 'Ashland/63rd-bound': 30184 } },
+            { name: 'Ashland/63rd', mapId: 40290, lines: ['G'], stops: { 'Harlem-bound': 30056, 'Ashland/63rd-bound': 30057 } },
+
+            // Orange Line
+            { name: 'Midway', mapId: 40930, lines: ['Org'], stops: { 'Midway-bound': 30181, 'Loop-bound': 30182 } },
+            { name: 'Pulaski (Orange)', mapId: 40960, lines: ['Org'], stops: { 'Midway-bound': 30185, 'Loop-bound': 30186 } },
+            { name: 'Kedzie (Orange)', mapId: 41150, lines: ['Org'], stops: { 'Midway-bound': 30219, 'Loop-bound': 30220 } },
+            { name: 'Western (Orange)', mapId: 40310, lines: ['Org'], stops: { 'Midway-bound': 30060, 'Loop-bound': 30061 } },
+            { name: '35th/Archer', mapId: 40120, lines: ['Org'], stops: { 'Midway-bound': 30023, 'Loop-bound': 30024 } },
+            { name: 'Ashland (Orange)', mapId: 41060, lines: ['Org'], stops: { 'Midway-bound': 30203, 'Loop-bound': 30204 } },
+            { name: 'Halsted (Orange)', mapId: 41130, lines: ['Org'], stops: { 'Midway-bound': 30215, 'Loop-bound': 30216 } },
+
+            // Purple Line (Evanston)
+            { name: 'Linden', mapId: 41050, lines: ['P'], stops: { 'Linden-bound': 30201, 'Loop-bound': 30202 } },
+            { name: 'Central (Purple)', mapId: 41250, lines: ['P'], stops: { 'Linden-bound': 30239, 'Loop-bound': 30240 } },
+            { name: 'Noyes', mapId: 40400, lines: ['P'], stops: { 'Linden-bound': 30078, 'Loop-bound': 30079 } },
+            { name: 'Foster (Purple)', mapId: 40520, lines: ['P'], stops: { 'Linden-bound': 30101, 'Loop-bound': 30102 } },
+            { name: 'Davis', mapId: 40050, lines: ['P'], stops: { 'Linden-bound': 30010, 'Loop-bound': 30011 } },
+            { name: 'Dempster', mapId: 40690, lines: ['P'], stops: { 'Linden-bound': 30133, 'Loop-bound': 30134 } },
+            { name: 'Main', mapId: 40270, lines: ['P'], stops: { 'Linden-bound': 30052, 'Loop-bound': 30053 } },
+            { name: 'South Boulevard', mapId: 40840, lines: ['P'], stops: { 'Linden-bound': 30161, 'Loop-bound': 30162 } },
+
+            // Pink Line
+            { name: '54th/Cermak', mapId: 40580, lines: ['Pink'], stops: { '54th/Cermak-bound': 30113, 'Loop-bound': 30114 } },
+            { name: 'Cicero (Pink)', mapId: 40420, lines: ['Pink'], stops: { '54th/Cermak-bound': 30082, 'Loop-bound': 30083 } },
+            { name: 'Kostner', mapId: 40600, lines: ['Pink'], stops: { '54th/Cermak-bound': 30117, 'Loop-bound': 30118 } },
+            { name: 'Pulaski (Pink)', mapId: 40150, lines: ['Pink'], stops: { '54th/Cermak-bound': 30028, 'Loop-bound': 30029 } },
+            { name: 'Central Park', mapId: 40780, lines: ['Pink'], stops: { '54th/Cermak-bound': 30151, 'Loop-bound': 30152 } },
+            { name: 'Kedzie (Pink)', mapId: 41040, lines: ['Pink'], stops: { '54th/Cermak-bound': 30199, 'Loop-bound': 30200 } },
+            { name: 'California (Pink)', mapId: 40440, lines: ['Pink'], stops: { '54th/Cermak-bound': 30086, 'Loop-bound': 30087 } },
+            { name: 'Western (Pink)', mapId: 40740, lines: ['Pink'], stops: { '54th/Cermak-bound': 30143, 'Loop-bound': 30144 } },
+            { name: 'Damen (Pink)', mapId: 40210, lines: ['Pink'], stops: { '54th/Cermak-bound': 30040, 'Loop-bound': 30041 } },
+            { name: '18th', mapId: 40830, lines: ['Pink'], stops: { '54th/Cermak-bound': 30159, 'Loop-bound': 30160 } },
+            { name: 'Polk', mapId: 41030, lines: ['Pink'], stops: { '54th/Cermak-bound': 30197, 'Loop-bound': 30198 } },
+            { name: 'Ashland (Pink)', mapId: 40170, lines: ['Pink'], stops: { '54th/Cermak-bound': 30032, 'Loop-bound': 30033 } },
+
+            // Yellow Line
+            { name: 'Dempster-Skokie', mapId: 40140, lines: ['Y'], stops: { 'Dempster-Skokie-bound': 30026, 'Howard-bound': 30027 } },
+            { name: 'Oakton-Skokie', mapId: 41680, lines: ['Y'], stops: { 'Dempster-Skokie-bound': 30297, 'Howard-bound': 30298 } }
+        ];
+
+        // =====================================================================
+        // CONFIG MANAGER
+        // =====================================================================
+
+        class ConfigManager {
+            constructor() {
+                this.storageKey = STORAGE_NAMESPACE;
+            }
+
+            getConfig() {
+                const data = localStorage.getItem(this.storageKey);
+                if (data) {
+                    try {
+                        return JSON.parse(data);
+                    } catch (e) {
+                        console.error('Failed to parse config:', e);
+                    }
+                }
+                return this.getDefaultConfig();
+            }
+
+            getDefaultConfig() {
+                return {
+                    api_keys: { bus: '', train: '' },
+                    stops: [],
+                    preferences: { refreshInterval: 30, maxArrivals: 5 }
+                };
+            }
+
+            saveConfig(config) {
+                localStorage.setItem(this.storageKey, JSON.stringify(config));
+            }
+
+            getApiKeys() {
+                const config = this.getConfig();
+                // Handle migration from single api_key to api_keys
+                if (config.api_key && !config.api_keys) {
+                    return { bus: '', train: config.api_key };
+                }
+                return config.api_keys || { bus: '', train: '' };
+            }
+
+            setApiKeys(busKey, trainKey) {
+                const config = this.getConfig();
+                config.api_keys = { bus: busKey || '', train: trainKey || '' };
+                delete config.api_key; // Remove old single key if present
+                this.saveConfig(config);
+            }
+
+            getStops() {
+                return this.getConfig().stops || [];
+            }
+
+            addStop(stop) {
+                const config = this.getConfig();
+                stop.id = Date.now().toString();
+                config.stops.push(stop);
+                this.saveConfig(config);
+                return stop;
+            }
+
+            removeStop(id) {
+                const config = this.getConfig();
+                config.stops = config.stops.filter(s => s.id !== id);
+                this.saveConfig(config);
+            }
+
+            moveStop(id, direction) {
+                const config = this.getConfig();
+                const index = config.stops.findIndex(s => s.id === id);
+                if (index === -1) return;
+
+                const newIndex = direction === 'up' ? index - 1 : index + 1;
+                if (newIndex < 0 || newIndex >= config.stops.length) return;
+
+                const temp = config.stops[index];
+                config.stops[index] = config.stops[newIndex];
+                config.stops[newIndex] = temp;
+                this.saveConfig(config);
+            }
+
+            getPreferences() {
+                return this.getConfig().preferences || { refreshInterval: 30, maxArrivals: 5 };
+            }
+
+            setPreferences(prefs) {
+                const config = this.getConfig();
+                config.preferences = { ...config.preferences, ...prefs };
+                this.saveConfig(config);
+            }
+
+            hasApiKey() {
+                const keys = this.getApiKeys();
+                return !!(keys.bus || keys.train);
+            }
+
+            clearAll() {
+                localStorage.removeItem(this.storageKey);
+            }
+        }
+
+        // =====================================================================
+        // CORS PROXY HELPER
+        // =====================================================================
+
+        // CTA APIs don't include CORS headers, so we need a proxy for browser requests
+        const CORS_PROXIES = [
+            'https://corsproxy.io/?',
+            'https://api.allorigins.win/raw?url='
+        ];
+
+        async function fetchWithCorsProxy(url) {
+            // Try direct fetch first (works if running from same origin or CORS is enabled)
+            try {
+                const response = await fetch(url);
+                if (response.ok) return response;
+            } catch (e) {
+                // Direct fetch failed, try proxies
+            }
+
+            // Try each CORS proxy
+            for (const proxy of CORS_PROXIES) {
+                try {
+                    const proxyUrl = proxy + encodeURIComponent(url);
+                    const response = await fetch(proxyUrl);
+                    if (response.ok) return response;
+                } catch (e) {
+                    continue;
+                }
+            }
+
+            throw new Error('Failed to fetch data (CORS blocked)');
+        }
+
+        // =====================================================================
+        // CTA API CLASSES
+        // =====================================================================
+
+        class BusTrackerAPI {
+            constructor(apiKey) {
+                this.apiKey = apiKey;
+                this.baseUrl = 'https://ctabustracker.com/bustime/api/v2';
+            }
+
+            async getPredictions(stopId) {
+                if (!this.apiKey) {
+                    throw new Error('API key not configured');
+                }
+
+                const url = `${this.baseUrl}/getpredictions?key=${this.apiKey}&stpid=${stopId}&format=json`;
+
+                try {
+                    const response = await fetchWithCorsProxy(url);
+                    if (!response.ok) throw new Error('Network error');
+
+                    const data = await response.json();
+
+                    if (data['bustime-response'].error) {
+                        const error = data['bustime-response'].error[0];
+                        throw new Error(error.msg || 'API error');
+                    }
+
+                    const predictions = data['bustime-response'].prd || [];
+                    return predictions.map(p => ({
+                        route: p.rt,
+                        direction: p.rtdir,
+                        destination: p.des,
+                        predictedTime: p.prdtm,
+                        arrivalIn: this.calculateArrivalMinutes(p.prdtm),
+                        currentLocation: p.stpnm !== p.stpnm ? `@ ${p.stpnm}` : '',
+                        isDelayed: p.dly === 'true',
+                        vehicleId: p.vid
+                    }));
+                } catch (error) {
+                    console.error('Bus API error:', error);
+                    throw error;
+                }
+            }
+
+            async getRoutes() {
+                if (!this.apiKey) throw new Error('API key not configured');
+
+                const url = `${this.baseUrl}/getroutes?key=${this.apiKey}&format=json`;
+                const response = await fetchWithCorsProxy(url);
+                const data = await response.json();
+
+                if (data['bustime-response'].error) {
+                    throw new Error(data['bustime-response'].error[0].msg);
+                }
+
+                return data['bustime-response'].routes || [];
+            }
+
+            async getDirections(routeId) {
+                if (!this.apiKey) throw new Error('API key not configured');
+
+                const url = `${this.baseUrl}/getdirections?key=${this.apiKey}&rt=${routeId}&format=json`;
+                const response = await fetchWithCorsProxy(url);
+                const data = await response.json();
+
+                if (data['bustime-response'].error) {
+                    throw new Error(data['bustime-response'].error[0].msg);
+                }
+
+                return data['bustime-response'].directions || [];
+            }
+
+            async getStops(routeId, direction) {
+                if (!this.apiKey) throw new Error('API key not configured');
+
+                const url = `${this.baseUrl}/getstops?key=${this.apiKey}&rt=${routeId}&dir=${encodeURIComponent(direction)}&format=json`;
+                const response = await fetchWithCorsProxy(url);
+                const data = await response.json();
+
+                if (data['bustime-response'].error) {
+                    throw new Error(data['bustime-response'].error[0].msg);
+                }
+
+                return data['bustime-response'].stops || [];
+            }
+
+            calculateArrivalMinutes(prdtm) {
+                // prdtm format: "YYYYMMDD HH:MM"
+                const year = parseInt(prdtm.substring(0, 4));
+                const month = parseInt(prdtm.substring(4, 6)) - 1;
+                const day = parseInt(prdtm.substring(6, 8));
+                const hours = parseInt(prdtm.substring(9, 11));
+                const minutes = parseInt(prdtm.substring(12, 14));
+
+                const predictedDate = new Date(year, month, day, hours, minutes);
+                const now = new Date();
+                const diffMs = predictedDate - now;
+                const diffMins = Math.round(diffMs / 60000);
+
+                return Math.max(0, diffMins);
+            }
+        }
+
+        class TrainTrackerAPI {
+            constructor(apiKey) {
+                this.apiKey = apiKey;
+                this.baseUrl = 'https://lapi.transitchicago.com/api/1.0';
+            }
+
+            async getArrivals(stopId) {
+                if (!this.apiKey) {
+                    throw new Error('API key not configured');
+                }
+
+                const url = `${this.baseUrl}/ttarrivals.aspx?key=${this.apiKey}&stpid=${stopId}&outputType=JSON`;
+
+                try {
+                    const response = await fetchWithCorsProxy(url);
+                    if (!response.ok) throw new Error('Network error');
+
+                    const data = await response.json();
+
+                    if (data.ctatt.errCd !== '0') {
+                        throw new Error(data.ctatt.errNm || 'API error');
+                    }
+
+                    const arrivals = data.ctatt.eta || [];
+                    return arrivals.map(a => ({
+                        line: a.rt,
+                        lineName: this.getLineName(a.rt),
+                        lineColor: this.getLineColor(a.rt),
+                        destination: a.destNm,
+                        station: a.staNm,
+                        predictedTime: a.arrT,
+                        arrivalIn: this.calculateArrivalMinutes(a.arrT),
+                        currentStation: a.nextStaNm || a.staNm,
+                        isApproaching: a.isApp === '1',
+                        isDelayed: a.isDly === '1',
+                        runNumber: a.rn
+                    }));
+                } catch (error) {
+                    console.error('Train API error:', error);
+                    throw error;
+                }
+            }
+
+            getLineName(code) {
+                const line = CTA_LINES.find(l => l.id === code);
+                return line ? line.name : code;
+            }
+
+            getLineColor(code) {
+                const line = CTA_LINES.find(l => l.id === code);
+                return line ? line.color : '#666666';
+            }
+
+            calculateArrivalMinutes(arrT) {
+                // arrT format: "YYYY-MM-DDTHH:MM:SS"
+                const predictedDate = new Date(arrT);
+                const now = new Date();
+                const diffMs = predictedDate - now;
+                const diffMins = Math.round(diffMs / 60000);
+
+                return Math.max(0, diffMins);
+            }
+        }
+
+        // =====================================================================
+        // MAIN TRACKER CLASS
+        // =====================================================================
+
+        class CTATracker {
+            constructor() {
+                this.config = new ConfigManager();
+                this.busApi = null;
+                this.trainApi = null;
+                this.refreshTimer = null;
+                this.arrivalsCache = new Map();
+
+                this.init();
+            }
+
+            init() {
+                this.setupApis();
+                this.setupEventListeners();
+                this.render();
+
+                // Show settings if no API key configured
+                if (!this.config.hasApiKey()) {
+                    this.showSettings();
+                } else {
+                    this.startAutoRefresh();
+                }
+            }
+
+            setupApis() {
+                const keys = this.config.getApiKeys();
+                this.busApi = new BusTrackerAPI(keys.bus);
+                this.trainApi = new TrainTrackerAPI(keys.train);
+            }
+
+            setupEventListeners() {
+                // Header buttons
+                document.getElementById('settingsBtn').addEventListener('click', () => this.showSettings());
+                document.getElementById('refreshBtn').addEventListener('click', () => this.refresh());
+                document.getElementById('addStopBtn').addEventListener('click', () => this.showAddStop());
+
+                // Settings modal
+                document.getElementById('closeSettingsBtn').addEventListener('click', () => this.hideSettings());
+                document.getElementById('saveSettingsBtn').addEventListener('click', () => this.saveSettings());
+                document.getElementById('clearAllDataBtn').addEventListener('click', () => this.clearAllData());
+
+                // Add stop modal
+                document.getElementById('closeAddStopBtn').addEventListener('click', () => this.hideAddStop());
+                document.getElementById('trainTab').addEventListener('click', () => this.switchToTab('train'));
+                document.getElementById('busTab').addEventListener('click', () => this.switchToTab('bus'));
+
+                // Train form
+                document.getElementById('trainLine').addEventListener('change', (e) => this.onTrainLineChange(e));
+                document.getElementById('trainStation').addEventListener('change', (e) => this.onTrainStationChange(e));
+                document.getElementById('trainDirection').addEventListener('change', (e) => this.onTrainDirectionChange(e));
+                document.getElementById('addTrainStopBtn').addEventListener('click', () => this.addTrainStop());
+
+                // Bus form
+                document.getElementById('busRoute').addEventListener('input', (e) => this.onBusRouteInput(e));
+                document.getElementById('busDirection').addEventListener('change', (e) => this.onBusDirectionChange(e));
+                document.getElementById('busStopSearch').addEventListener('input', (e) => this.onBusStopSearch(e));
+                document.getElementById('busSearchClear').addEventListener('click', () => this.clearBusSearch());
+                document.getElementById('addBusStopBtn').addEventListener('click', () => this.addBusStop());
+
+                // Populate train line dropdown
+                this.populateTrainLines();
+            }
+
+            // =========================================================================
+            // RENDERING
+            // =========================================================================
+
+            render() {
+                const stops = this.config.getStops();
+                const container = document.getElementById('stopsContainer');
+
+                if (stops.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">&#128646;</div>
+                            <p>No stops added yet.<br>Add your first stop to start tracking!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = stops.map((stop, index) => this.renderStopCard(stop, index, stops.length)).join('');
+
+                // Fetch arrivals for all stops
+                this.fetchAllArrivals();
+            }
+
+            renderStopCard(stop, index, total) {
+                const isFirst = index === 0;
+                const isLast = index === total - 1;
+                const lineColor = stop.type === 'train' ? this.getLineColor(stop.line) : 'var(--neon-cyan)';
+
+                return `
+                    <div class="card stop-card" data-stop-id="${stop.id}">
+                        <div class="stop-header">
+                            <div class="line-indicator" style="background: ${lineColor};"></div>
+                            <div class="stop-info">
+                                <div class="stop-line" style="color: ${lineColor};">
+                                    ${stop.type === 'train' ? stop.lineName : `Route ${stop.route}`}
+                                </div>
+                                <div class="stop-name">${stop.displayName}</div>
+                            </div>
+                            <div class="stop-actions">
+                                <button class="stop-action-btn" onclick="tracker.moveStop('${stop.id}', 'up')" ${isFirst ? 'disabled style="opacity:0.3"' : ''} title="Move up">&#9650;</button>
+                                <button class="stop-action-btn" onclick="tracker.moveStop('${stop.id}', 'down')" ${isLast ? 'disabled style="opacity:0.3"' : ''} title="Move down">&#9660;</button>
+                                <button class="stop-action-btn delete" onclick="tracker.deleteStop('${stop.id}')" title="Delete">&#10005;</button>
+                            </div>
+                        </div>
+                        <div class="arrivals-list" id="arrivals-${stop.id}">
+                            <div class="stop-loading">Loading arrivals</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderArrivals(stopId, arrivals, stopType) {
+                const container = document.getElementById(`arrivals-${stopId}`);
+                if (!container) return;
+
+                const prefs = this.config.getPreferences();
+                const maxArrivals = prefs.maxArrivals || 5;
+                const limitedArrivals = arrivals.slice(0, maxArrivals);
+
+                if (limitedArrivals.length === 0) {
+                    container.innerHTML = '<div class="no-arrivals">No arrivals predicted</div>';
+                    return;
+                }
+
+                container.innerHTML = limitedArrivals.map(arrival => {
+                    const isArriving = arrival.arrivalIn <= 1;
+                    const timeDisplay = isArriving ? 'DUE' : `${arrival.arrivalIn} min`;
+
+                    if (stopType === 'train') {
+                        return `
+                            <div class="arrival-row">
+                                <div class="arrival-time ${isArriving ? 'arriving' : ''}">${timeDisplay}</div>
+                                <div class="arrival-location">@ ${arrival.currentStation}</div>
+                                <div class="arrival-destination">${arrival.destination}</div>
+                            </div>
+                        `;
+                    } else {
+                        return `
+                            <div class="arrival-row">
+                                <div class="arrival-time ${isArriving ? 'arriving' : ''}">${timeDisplay}</div>
+                                <div class="arrival-location">${arrival.destination}</div>
+                            </div>
+                        `;
+                    }
+                }).join('');
+            }
+
+            renderError(stopId, message) {
+                const container = document.getElementById(`arrivals-${stopId}`);
+                if (!container) return;
+
+                container.innerHTML = `<div class="stop-error">${message}</div>`;
+            }
+
+            // =========================================================================
+            // DATA FETCHING
+            // =========================================================================
+
+            async fetchAllArrivals() {
+                const stops = this.config.getStops();
+                const now = new Date();
+
+                document.getElementById('lastUpdated').textContent = `Updated ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+
+                for (const stop of stops) {
+                    try {
+                        let arrivals;
+                        if (stop.type === 'train') {
+                            arrivals = await this.trainApi.getArrivals(stop.stpid);
+                        } else {
+                            arrivals = await this.busApi.getPredictions(stop.stpid);
+                        }
+                        this.arrivalsCache.set(stop.id, arrivals);
+                        this.renderArrivals(stop.id, arrivals, stop.type);
+                    } catch (error) {
+                        this.renderError(stop.id, error.message || 'Failed to fetch arrivals');
+                    }
+                }
+            }
+
+            async refresh() {
+                const btn = document.getElementById('refreshBtn');
+                btn.classList.add('refreshing');
+
+                await this.fetchAllArrivals();
+
+                setTimeout(() => btn.classList.remove('refreshing'), 500);
+            }
+
+            startAutoRefresh() {
+                this.stopAutoRefresh();
+
+                const prefs = this.config.getPreferences();
+                const interval = (prefs.refreshInterval || 30) * 1000;
+
+                this.refreshTimer = setInterval(() => this.refresh(), interval);
+            }
+
+            stopAutoRefresh() {
+                if (this.refreshTimer) {
+                    clearInterval(this.refreshTimer);
+                    this.refreshTimer = null;
+                }
+            }
+
+            // =========================================================================
+            // STOP MANAGEMENT
+            // =========================================================================
+
+            moveStop(id, direction) {
+                this.config.moveStop(id, direction);
+                this.render();
+            }
+
+            deleteStop(id) {
+                if (confirm('Remove this stop?')) {
+                    this.config.removeStop(id);
+                    this.render();
+                }
+            }
+
+            // =========================================================================
+            // SETTINGS
+            // =========================================================================
+
+            showSettings() {
+                const keys = this.config.getApiKeys();
+                const prefs = this.config.getPreferences();
+
+                document.getElementById('trainApiKey').value = keys.train || '';
+                document.getElementById('busApiKey').value = keys.bus || '';
+                document.getElementById('refreshInterval').value = prefs.refreshInterval || 30;
+                document.getElementById('maxArrivals').value = prefs.maxArrivals || 5;
+
+                document.getElementById('settingsModal').classList.add('active');
+            }
+
+            hideSettings() {
+                document.getElementById('settingsModal').classList.remove('active');
+            }
+
+            saveSettings() {
+                const trainKey = document.getElementById('trainApiKey').value.trim();
+                const busKey = document.getElementById('busApiKey').value.trim();
+                const refreshInterval = parseInt(document.getElementById('refreshInterval').value) || 30;
+                const maxArrivals = parseInt(document.getElementById('maxArrivals').value) || 5;
+
+                this.config.setApiKeys(busKey, trainKey);
+                this.config.setPreferences({ refreshInterval, maxArrivals });
+
+                this.setupApis();
+                this.startAutoRefresh();
+                this.hideSettings();
+                this.refresh();
+            }
+
+            clearAllData() {
+                if (confirm('This will clear all your settings and stops. Are you sure?')) {
+                    this.config.clearAll();
+                    location.reload();
+                }
+            }
+
+            // =========================================================================
+            // ADD STOP MODAL
+            // =========================================================================
+
+            showAddStop() {
+                document.getElementById('addStopModal').classList.add('active');
+                this.resetAddStopForm();
+            }
+
+            hideAddStop() {
+                document.getElementById('addStopModal').classList.remove('active');
+            }
+
+            resetAddStopForm() {
+                // Reset train form
+                document.getElementById('trainLine').value = '';
+                document.getElementById('trainStation').value = '';
+                document.getElementById('trainStation').disabled = true;
+                document.getElementById('trainStation').innerHTML = '<option value="">-- Select Station --</option>';
+                document.getElementById('trainDirection').value = '';
+                document.getElementById('trainDirection').disabled = true;
+                document.getElementById('trainDirection').innerHTML = '<option value="">-- Select Platform --</option>';
+                document.getElementById('addTrainStopBtn').disabled = true;
+
+                // Reset bus form
+                document.getElementById('busRoute').value = '';
+                document.getElementById('busDirection').value = '';
+                document.getElementById('busDirection').disabled = true;
+                document.getElementById('busDirection').innerHTML = '<option value="">-- Enter route first --</option>';
+                document.getElementById('busStopSearch').value = '';
+                document.getElementById('busStopSearch').disabled = true;
+                document.getElementById('busStopList').style.display = 'none';
+                document.getElementById('busStopList').innerHTML = '';
+                document.getElementById('busSearchClear').classList.remove('visible');
+                document.getElementById('addBusStopBtn').disabled = true;
+
+                this.selectedBusStop = null;
+                this.busStops = [];
+
+                // Switch to train tab by default
+                this.switchToTab('train');
+            }
+
+            switchToTab(type) {
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.classList.toggle('active', tab.dataset.type === type);
+                });
+
+                document.getElementById('trainForm').style.display = type === 'train' ? 'block' : 'none';
+                document.getElementById('busForm').style.display = type === 'bus' ? 'block' : 'none';
+            }
+
+            // =========================================================================
+            // TRAIN STOP LOOKUP
+            // =========================================================================
+
+            populateTrainLines() {
+                const select = document.getElementById('trainLine');
+                select.innerHTML = '<option value="">-- Select Line --</option>';
+
+                CTA_LINES.forEach(line => {
+                    const option = document.createElement('option');
+                    option.value = line.id;
+                    option.textContent = line.name;
+                    option.style.color = line.color;
+                    select.appendChild(option);
+                });
+            }
+
+            onTrainLineChange(e) {
+                const lineId = e.target.value;
+                const stationSelect = document.getElementById('trainStation');
+                const directionSelect = document.getElementById('trainDirection');
+
+                stationSelect.innerHTML = '<option value="">-- Select Station --</option>';
+                directionSelect.innerHTML = '<option value="">-- Select Platform --</option>';
+                directionSelect.disabled = true;
+                document.getElementById('addTrainStopBtn').disabled = true;
+
+                if (!lineId) {
+                    stationSelect.disabled = true;
+                    return;
+                }
+
+                // Filter stations that have this line
+                const stations = CTA_STATIONS.filter(s => s.lines.includes(lineId));
+
+                stations.forEach(station => {
+                    const option = document.createElement('option');
+                    option.value = station.mapId;
+                    option.textContent = station.name;
+                    stationSelect.appendChild(option);
+                });
+
+                stationSelect.disabled = false;
+            }
+
+            onTrainStationChange(e) {
+                const mapId = parseInt(e.target.value);
+                const lineId = document.getElementById('trainLine').value;
+                const directionSelect = document.getElementById('trainDirection');
+
+                directionSelect.innerHTML = '<option value="">-- Select Platform --</option>';
+                document.getElementById('addTrainStopBtn').disabled = true;
+
+                if (!mapId) {
+                    directionSelect.disabled = true;
+                    return;
+                }
+
+                const station = CTA_STATIONS.find(s => s.mapId === mapId);
+                if (!station) {
+                    directionSelect.disabled = true;
+                    return;
+                }
+
+                // Get available directions for this station
+                const directions = Object.keys(station.stops);
+
+                directions.forEach(dir => {
+                    const option = document.createElement('option');
+                    option.value = dir;
+                    option.textContent = dir;
+                    directionSelect.appendChild(option);
+                });
+
+                directionSelect.disabled = false;
+            }
+
+            onTrainDirectionChange(e) {
+                const direction = e.target.value;
+                document.getElementById('addTrainStopBtn').disabled = !direction;
+            }
+
+            addTrainStop() {
+                const lineId = document.getElementById('trainLine').value;
+                const mapId = parseInt(document.getElementById('trainStation').value);
+                const direction = document.getElementById('trainDirection').value;
+
+                const line = CTA_LINES.find(l => l.id === lineId);
+                const station = CTA_STATIONS.find(s => s.mapId === mapId);
+
+                if (!line || !station || !direction) return;
+
+                const stpid = station.stops[direction];
+
+                const stop = this.config.addStop({
+                    type: 'train',
+                    stpid: stpid,
+                    line: lineId,
+                    lineName: line.name,
+                    lineColor: line.color,
+                    station: station.name,
+                    direction: direction,
+                    displayName: `${station.name} (${direction})`
+                });
+
+                this.hideAddStop();
+                this.render();
+            }
+
+            getLineColor(lineId) {
+                const line = CTA_LINES.find(l => l.id === lineId);
+                return line ? line.color : '#666666';
+            }
+
+            // =========================================================================
+            // BUS STOP LOOKUP
+            // =========================================================================
+
+            busRouteTimeout = null;
+
+            async onBusRouteInput(e) {
+                const route = e.target.value.trim();
+                const directionSelect = document.getElementById('busDirection');
+
+                // Debounce
+                if (this.busRouteTimeout) {
+                    clearTimeout(this.busRouteTimeout);
+                }
+
+                if (!route) {
+                    directionSelect.disabled = true;
+                    directionSelect.innerHTML = '<option value="">-- Enter route first --</option>';
+                    document.getElementById('busStopSearch').disabled = true;
+                    document.getElementById('busStopList').style.display = 'none';
+                    return;
+                }
+
+                this.busRouteTimeout = setTimeout(async () => {
+                    try {
+                        const directions = await this.busApi.getDirections(route);
+
+                        directionSelect.innerHTML = '<option value="">-- Select Direction --</option>';
+                        directions.forEach(dir => {
+                            const option = document.createElement('option');
+                            option.value = dir.dir;
+                            option.textContent = dir.dir;
+                            directionSelect.appendChild(option);
+                        });
+                        directionSelect.disabled = false;
+
+                        this.currentBusRoute = route;
+                    } catch (error) {
+                        directionSelect.innerHTML = '<option value="">Route not found</option>';
+                        directionSelect.disabled = true;
+                    }
+                }, 500);
+            }
+
+            async onBusDirectionChange(e) {
+                const direction = e.target.value;
+                const searchInput = document.getElementById('busStopSearch');
+                const stopList = document.getElementById('busStopList');
+
+                if (!direction || !this.currentBusRoute) {
+                    searchInput.disabled = true;
+                    stopList.style.display = 'none';
+                    return;
+                }
+
+                try {
+                    this.busStops = await this.busApi.getStops(this.currentBusRoute, direction);
+                    this.currentBusDirection = direction;
+
+                    searchInput.disabled = false;
+                    searchInput.value = '';
+                    this.renderBusStopList(this.busStops);
+                } catch (error) {
+                    searchInput.disabled = true;
+                    stopList.innerHTML = '<div class="stop-list-item">Error loading stops</div>';
+                    stopList.style.display = 'block';
+                }
+            }
+
+            onBusStopSearch(e) {
+                const query = e.target.value.toLowerCase().trim();
+                const clearBtn = document.getElementById('busSearchClear');
+
+                clearBtn.classList.toggle('visible', query.length > 0);
+
+                if (!query) {
+                    this.renderBusStopList(this.busStops);
+                    return;
+                }
+
+                const filtered = this.busStops.filter(stop =>
+                    stop.stpnm.toLowerCase().includes(query) ||
+                    stop.stpid.toString().includes(query)
+                );
+
+                this.renderBusStopList(filtered);
+            }
+
+            clearBusSearch() {
+                document.getElementById('busStopSearch').value = '';
+                document.getElementById('busSearchClear').classList.remove('visible');
+                this.renderBusStopList(this.busStops);
+            }
+
+            renderBusStopList(stops) {
+                const list = document.getElementById('busStopList');
+
+                if (stops.length === 0) {
+                    list.innerHTML = '<div class="stop-list-item">No stops found</div>';
+                    list.style.display = 'block';
+                    return;
+                }
+
+                list.innerHTML = stops.map(stop => `
+                    <div class="stop-list-item" data-stop-id="${stop.stpid}" onclick="tracker.selectBusStop(${stop.stpid})">
+                        ${stop.stpnm}
+                        <div class="stop-id">Stop #${stop.stpid}</div>
+                    </div>
+                `).join('');
+
+                list.style.display = 'block';
+            }
+
+            selectBusStop(stpid) {
+                // Convert to string for comparison since API may return string or number
+                const stpidStr = String(stpid);
+                const stop = this.busStops.find(s => String(s.stpid) === stpidStr);
+                if (!stop) return;
+
+                this.selectedBusStop = stop;
+
+                // Highlight selected
+                document.querySelectorAll('#busStopList .stop-list-item').forEach(item => {
+                    item.classList.toggle('selected', item.dataset.stopId === stpidStr);
+                });
+
+                document.getElementById('addBusStopBtn').disabled = false;
+            }
+
+            addBusStop() {
+                if (!this.selectedBusStop || !this.currentBusRoute || !this.currentBusDirection) return;
+
+                const stop = this.config.addStop({
+                    type: 'bus',
+                    stpid: this.selectedBusStop.stpid,
+                    route: this.currentBusRoute,
+                    direction: this.currentBusDirection,
+                    displayName: `${this.selectedBusStop.stpnm} (${this.currentBusDirection})`
+                });
+
+                this.hideAddStop();
+                this.render();
+            }
+
+        }
+
+        // =====================================================================
+        // INITIALIZE
+        // =====================================================================
+
+        const tracker = new CTATracker();
+    </script>
+</body>
+</html>
