@@ -679,6 +679,20 @@
             </div>
 
             <div class="settings-section">
+                <h3>CORS Proxy</h3>
+                <div class="form-group">
+                    <label for="customProxyUrl">Custom Proxy URL</label>
+                    <input type="text" id="customProxyUrl" placeholder="https://cta-cors.your-handle.workers.dev">
+                    <p class="info-text">
+                        Deploy <strong>cors-worker.js</strong> to
+                        <a href="https://dash.cloudflare.com" target="_blank" class="info-link">Cloudflare Workers</a>
+                        (free) and paste the URL here to bypass public proxy limits.
+                        Leave blank to use public fallback proxies.
+                    </p>
+                </div>
+            </div>
+
+            <div class="settings-section">
                 <h3>API Keys</h3>
                 <div class="form-group">
                     <label for="trainApiKey">Train Tracker API Key</label>
@@ -989,7 +1003,8 @@
                 return {
                     api_keys: { bus: '', train: '' },
                     stops: [],
-                    preferences: { refreshInterval: 30, maxArrivals: 5 }
+                    preferences: { refreshInterval: 30, maxArrivals: 5 },
+                    customProxyUrl: ''
                 };
             }
 
@@ -1060,6 +1075,16 @@
                 return !!(keys.bus || keys.train);
             }
 
+            getCustomProxyUrl() {
+                return this.getConfig().customProxyUrl || '';
+            }
+
+            setCustomProxyUrl(url) {
+                const config = this.getConfig();
+                config.customProxyUrl = url ? url.trim() : '';
+                this.saveConfig(config);
+            }
+
             clearAll() {
                 localStorage.removeItem(this.storageKey);
             }
@@ -1069,22 +1094,36 @@
         // CORS PROXY HELPER
         // =====================================================================
 
-        // CTA APIs don't include CORS headers, so we need a proxy for browser requests
+        // CTA APIs don't include CORS headers, so we need a proxy for browser requests.
+        // Deploy cors-worker.js to Cloudflare Workers (free tier) and paste the URL
+        // into Settings → Custom Proxy URL to avoid free-tier public proxy restrictions.
         const CORS_PROXIES = [
             'https://corsproxy.io/?',
             'https://api.allorigins.win/raw?url='
         ];
 
         async function fetchWithCorsProxy(url) {
-            // Try direct fetch first (works if running from same origin or CORS is enabled)
+            // 1. Try the user-configured custom proxy first (e.g. a Cloudflare Worker)
+            const customProxy = configManager && configManager.getCustomProxyUrl();
+            if (customProxy) {
+                try {
+                    const proxyUrl = customProxy.replace(/\/?$/, '/?url=') + encodeURIComponent(url);
+                    const response = await fetch(proxyUrl);
+                    if (response.ok) return response;
+                } catch (e) {
+                    console.warn('Custom proxy failed, falling back:', e);
+                }
+            }
+
+            // 2. Try direct fetch (works in environments where CTA adds CORS headers)
             try {
                 const response = await fetch(url);
                 if (response.ok) return response;
             } catch (e) {
-                // Direct fetch failed, try proxies
+                // Direct fetch failed, try public proxies
             }
 
-            // Try each CORS proxy
+            // 3. Fall back to public CORS proxies
             for (const proxy of CORS_PROXIES) {
                 try {
                     const proxyUrl = proxy + encodeURIComponent(url);
@@ -1095,8 +1134,11 @@
                 }
             }
 
-            throw new Error('Failed to fetch data (CORS blocked)');
+            throw new Error('Failed to fetch data — configure a Custom Proxy URL in Settings');
         }
+
+        // Bootstrapped before CTATracker so fetchWithCorsProxy can access it
+        let configManager;
 
         // =====================================================================
         // CTA API CLASSES
@@ -1133,7 +1175,7 @@
                         destination: p.des,
                         predictedTime: p.prdtm,
                         arrivalIn: this.calculateArrivalMinutes(p.prdtm),
-                        currentLocation: p.stpnm !== p.stpnm ? `@ ${p.stpnm}` : '',
+                        currentLocation: p.prdctdn === 'APPROACHING' ? 'Approaching' : (p.stpnm ? `@ ${p.stpnm}` : ''),
                         isDelayed: p.dly === 'true',
                         vehicleId: p.vid
                     }));
@@ -1272,7 +1314,7 @@
 
         class CTATracker {
             constructor() {
-                this.config = new ConfigManager();
+                this.config = configManager;
                 this.busApi = null;
                 this.trainApi = null;
                 this.refreshTimer = null;
@@ -1425,7 +1467,11 @@
                 const container = document.getElementById(`arrivals-${stopId}`);
                 if (!container) return;
 
-                container.innerHTML = `<div class="stop-error">${message}</div>`;
+                const div = document.createElement('div');
+                div.className = 'stop-error';
+                div.textContent = message;
+                container.innerHTML = '';
+                container.appendChild(div);
             }
 
             // =========================================================================
@@ -1438,7 +1484,8 @@
 
                 document.getElementById('lastUpdated').textContent = `Updated ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
 
-                for (const stop of stops) {
+                // Fetch all stops in parallel instead of sequentially
+                await Promise.all(stops.map(async (stop) => {
                     try {
                         let arrivals;
                         if (stop.type === 'train') {
@@ -1451,7 +1498,7 @@
                     } catch (error) {
                         this.renderError(stop.id, error.message || 'Failed to fetch arrivals');
                     }
-                }
+                }));
             }
 
             async refresh() {
@@ -1503,6 +1550,7 @@
                 const keys = this.config.getApiKeys();
                 const prefs = this.config.getPreferences();
 
+                document.getElementById('customProxyUrl').value = this.config.getCustomProxyUrl();
                 document.getElementById('trainApiKey').value = keys.train || '';
                 document.getElementById('busApiKey').value = keys.bus || '';
                 document.getElementById('refreshInterval').value = prefs.refreshInterval || 30;
@@ -1516,11 +1564,13 @@
             }
 
             saveSettings() {
+                const customProxyUrl = document.getElementById('customProxyUrl').value.trim();
                 const trainKey = document.getElementById('trainApiKey').value.trim();
                 const busKey = document.getElementById('busApiKey').value.trim();
                 const refreshInterval = parseInt(document.getElementById('refreshInterval').value) || 30;
                 const maxArrivals = parseInt(document.getElementById('maxArrivals').value) || 5;
 
+                this.config.setCustomProxyUrl(customProxyUrl);
                 this.config.setApiKeys(busKey, trainKey);
                 this.config.setPreferences({ refreshInterval, maxArrivals });
 
@@ -1799,19 +1849,33 @@
 
             renderBusStopList(stops) {
                 const list = document.getElementById('busStopList');
+                list.innerHTML = '';
 
                 if (stops.length === 0) {
-                    list.innerHTML = '<div class="stop-list-item">No stops found</div>';
+                    const empty = document.createElement('div');
+                    empty.className = 'stop-list-item';
+                    empty.textContent = 'No stops found';
+                    list.appendChild(empty);
                     list.style.display = 'block';
                     return;
                 }
 
-                list.innerHTML = stops.map(stop => `
-                    <div class="stop-list-item" data-stop-id="${stop.stpid}" onclick="tracker.selectBusStop(${stop.stpid})">
-                        ${stop.stpnm}
-                        <div class="stop-id">Stop #${stop.stpid}</div>
-                    </div>
-                `).join('');
+                stops.forEach(stop => {
+                    const item = document.createElement('div');
+                    item.className = 'stop-list-item';
+                    item.dataset.stopId = stop.stpid;
+                    item.addEventListener('click', () => tracker.selectBusStop(stop.stpid));
+
+                    // Use textContent to prevent XSS from API-supplied stop names
+                    item.textContent = stop.stpnm;
+
+                    const idLabel = document.createElement('div');
+                    idLabel.className = 'stop-id';
+                    idLabel.textContent = `Stop #${stop.stpid}`;
+                    item.appendChild(idLabel);
+
+                    list.appendChild(item);
+                });
 
                 list.style.display = 'block';
             }
@@ -1853,6 +1917,9 @@
         // INITIALIZE
         // =====================================================================
 
+        // configManager is module-level so fetchWithCorsProxy can use it before
+        // CTATracker is fully constructed.
+        configManager = new ConfigManager();
         const tracker = new CTATracker();
     </script>
 </body>
