@@ -1069,33 +1069,22 @@
         // CORS PROXY HELPER
         // =====================================================================
 
-        // CTA APIs don't include CORS headers, so we need a proxy for browser requests
-        const CORS_PROXIES = [
-            'https://corsproxy.io/?',
-            'https://api.allorigins.win/raw?url='
-        ];
-
+        // CTA APIs don't include CORS headers, so we route through the integrated
+        // Cloudflare Pages Function at /proxy (same-origin, no CORS issues).
         async function fetchWithCorsProxy(url) {
-            // Try direct fetch first (works if running from same origin or CORS is enabled)
+            // 1. Integrated Pages Function proxy (same-origin, always works on CF Pages)
             try {
-                const response = await fetch(url);
-                if (response.ok) return response;
-            } catch (e) {
-                // Direct fetch failed, try proxies
-            }
+                const r = await fetch('/proxy?url=' + encodeURIComponent(url));
+                if (r.ok) return r;
+            } catch {}
 
-            // Try each CORS proxy
-            for (const proxy of CORS_PROXIES) {
-                try {
-                    const proxyUrl = proxy + encodeURIComponent(url);
-                    const response = await fetch(proxyUrl);
-                    if (response.ok) return response;
-                } catch (e) {
-                    continue;
-                }
-            }
+            // 2. Direct fetch (works in local dev or if CTA ever adds CORS headers)
+            try {
+                const r = await fetch(url);
+                if (r.ok) return r;
+            } catch {}
 
-            throw new Error('Failed to fetch data (CORS blocked)');
+            throw new Error('Failed to fetch CTA data. Is the site running on Cloudflare Pages?');
         }
 
         // =====================================================================
